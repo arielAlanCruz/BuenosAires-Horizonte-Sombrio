@@ -10,6 +10,7 @@ import enums.TipoGeneral;
  * sigue.
  * 
  */
+
 public class ResultadoTurno {
 
 	private final TipoGeneral accion;
@@ -86,6 +87,5 @@ public class ResultadoTurno {
 	public static ResultadoTurno info(String mensaje) {
 		return new ResultadoTurno(null, "", "", 0, 0, null, false, TipoGeneral.EN_CURSO, mensaje, 0);
 	}
-	
-	
+
 }

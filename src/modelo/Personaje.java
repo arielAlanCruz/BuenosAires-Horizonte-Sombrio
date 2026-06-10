@@ -145,4 +145,18 @@ public abstract class Personaje extends Entidad {
 	public int calcularAtaqueBase() {
 		return getAtaque() + equipamiento.getBonificacionAtaque();
 	}
+
+	@Override
+	public int getDefensa() {
+		// Retorna la defensa base heredada de Entidad más la bonificación del
+		// equipamiento activo
+		return super.getDefensa() + equipamiento.getBonificacionDefensa();
+	}
+
+	@Override
+	public int getVelocidad() {
+		// Retorna la velocidad base de Entidad más la bonificación del equipamiento
+		// activo
+		return super.getVelocidad() + equipamiento.getBonificacionVelocidad();
+	}
 }

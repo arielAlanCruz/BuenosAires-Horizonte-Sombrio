@@ -9,8 +9,8 @@ import vista.*;
  * Punto de entrada del programa.
  * MVP: inicializa MVC y muestra la pantalla inicial.
  */
-public class Main {
 
+public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             // Controlador (GRASP Controller)

@@ -1,9 +1,5 @@
 package modelo;
 
-/**
- * Consumible simple. - Puede curar vida y/o recuperar mana. - NO remueve del
- * inventario: eso lo hace Inventario.usarConsumible().
- */
 public class ItemConsumible extends Item {
 
 	private final int vidaRecuperada;
@@ -11,8 +7,19 @@ public class ItemConsumible extends Item {
 
 	public ItemConsumible(String nombre, String descripcion, int vidaRecuperada, int manaRecuperado) {
 		super(nombre, descripcion);
-		this.vidaRecuperada = Math.max(0, vidaRecuperada);
-		this.manaRecuperado = Math.max(0, manaRecuperado);
+
+		// Reemplazamos Math.max por if/else tradicional
+		if (vidaRecuperada < 0) {
+			this.vidaRecuperada = 0;
+		} else {
+			this.vidaRecuperada = vidaRecuperada;
+		}
+
+		if (manaRecuperado < 0) {
+			this.manaRecuperado = 0;
+		} else {
+			this.manaRecuperado = manaRecuperado;
+		}
 	}
 
 	public int getVidaRecuperada() {
@@ -24,18 +31,72 @@ public class ItemConsumible extends Item {
 	}
 
 	public void aplicarA(Personaje objetivo) {
-		if (objetivo == null)
+		if (objetivo == null) {
 			return;
-		if (!objetivo.estaVivo())
-			return;
+		}
 
-		if (vidaRecuperada > 0)
+		if (objetivo.estaVivo() == false) {
+			return;
+		}
+
+		if (vidaRecuperada > 0) {
 			objetivo.curar(vidaRecuperada);
-		if (manaRecuperado > 0)
+		}
+
+		if (manaRecuperado > 0) {
 			objetivo.recuperarMana(manaRecuperado);
+		}
 	}
 
-	// consumibles criollos de alto rendimiento en fogata
+	@Override
+	public String consumir(Personaje objetivo) {
+		if (objetivo == null) {
+			System.out.println("DEBUG: Falló. Objetivo es nulo.");
+			return "No se puede usar en este objetivo.";
+		}
+
+		if (objetivo.estaVivo() == false) {
+			System.out.println("DEBUG: Falló. Objetivo muerto.");
+			return "No se puede usar en este objetivo.";
+		}
+
+		int vidaAntes = objetivo.getVidaActual();
+		int manaAntes = objetivo.getManaActual();
+
+		this.aplicarA(objetivo);
+
+		// Calculamos cuánto ganó realmente sin usar Math.max()
+		int vidaGanada = objetivo.getVidaActual() - vidaAntes;
+		if (vidaGanada < 0) {
+			vidaGanada = 0;
+		}
+
+		int manaGanado = objetivo.getManaActual() - manaAntes;
+		if (manaGanado < 0) {
+			manaGanado = 0;
+		}
+
+		// Armamos el texto sumando palabras de forma tradicional
+		String resultado = objetivo.getNombre() + " usa " + getNombre() + ".";
+
+		if (vidaGanada > 0) {
+			resultado = resultado + " +" + vidaGanada + " HP.";
+		}
+
+		if (manaGanado > 0) {
+			resultado = resultado + " +" + manaGanado + " MP.";
+		}
+
+		if (vidaGanada == 0 && manaGanado == 0) {
+			resultado = resultado + " Sin efecto.";
+		}
+
+		System.out.println("DEBUG: Consumo exitoso -> " + resultado);
+
+		return resultado;
+	}
+
+	// Consumibles fijos
 	public static ItemConsumible tortaFrita() {
 		return new ItemConsumible("Torta frita", "Recupera 25 HP.", 25, 0);
 	}

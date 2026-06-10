@@ -2,11 +2,6 @@ package modelo;
 
 import java.io.Serializable;
 
-/**
- * Item base (abstract). MVP: no usamos TipoGeneral acá para evitar mezclar
- * responsabilidades; la distinción la hacemos por herencia (Consumible /
- * Equipable).
- */
 public abstract class Item implements Serializable {
 	private static final long serialVersionUID = 1L;
 
@@ -14,8 +9,24 @@ public abstract class Item implements Serializable {
 	private final String descripcion;
 
 	protected Item(String nombre, String descripcion) {
-		this.nombre = (nombre != null ? nombre : "");
-		this.descripcion = (descripcion != null ? descripcion : "");
+		// Validación con if clásico sin operadores ternarios
+		if (nombre != null) {
+			this.nombre = nombre;
+		} else {
+			this.nombre = "";
+		}
+
+		if (descripcion != null) {
+			this.descripcion = descripcion;
+		} else {
+			this.descripcion = "";
+		}
+	}
+
+	// Por defecto, un ítem no se puede consumir
+	public String consumir(Personaje objetivo) {
+		System.out.println("DEBUG: Intentando consumir " + this.nombre + " -> Falló, no es consumible.");
+		return null;
 	}
 
 	public String getNombre() {

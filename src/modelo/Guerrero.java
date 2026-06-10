@@ -12,7 +12,8 @@ public class Guerrero extends Personaje {
 
 		// Inicializa Habilidad de daño: costeMana=10, multDanio=1.6, cura=0,
 		// aplicaAturdido=false
-		agregarHabilidad(new Habilidad("Ataque Fuerte", "Causa daño físico incrementado.", 10, 1.6, 0, false));
+		agregarHabilidad(new Habilidad("Faconazo", "Causa daño físico incrementado.", 10, 1.6, 0, false));
+
 	}
 
 	@Override

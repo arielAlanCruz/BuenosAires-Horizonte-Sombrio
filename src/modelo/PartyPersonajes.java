@@ -18,16 +18,35 @@ public class PartyPersonajes implements Serializable {
 	public static PartyPersonajes crearPartyInicial() {
 		PartyPersonajes party = new PartyPersonajes();
 
-		party.agregarMiembro(new Guerrero("Guerrero"));
-		party.agregarMiembro(new Mago("Mago"));
-		party.agregarMiembro(new Arquero("Arquero"));
-		party.agregarMiembro(new Curandera("Curandera"));
+		// 1. Crear Guerrero y equipar
+		Guerrero guerrero = new Guerrero("Guerrero");
+		guerrero.getEquipamiento().equiparArma(ItemEquipable.cuchilloCriollo());
+		guerrero.getEquipamiento().equiparAccesorio(ItemEquipable.amuletoGauchito());
+		party.agregarMiembro(guerrero);
 
-		// Inventario compartido inicial ampliado
+		// 2. Crear Mago y equipar
+		Mago mago = new Mago("Mago");
+		mago.getEquipamiento().equiparArma(ItemEquipable.baculoMistico());
+		mago.getEquipamiento().equiparAccesorio(ItemEquipable.amuletoGauchito());
+		party.agregarMiembro(mago);
+
+		// 3. Crear Arquero y equipar
+		Arquero arquero = new Arquero("Arquero");
+		arquero.getEquipamiento().equiparArma(ItemEquipable.arcoReforzado());
+		arquero.getEquipamiento().equiparAccesorio(ItemEquipable.amuletoGauchito());
+		party.agregarMiembro(arquero);
+
+		// 4. Crear Curandera y equipar
+		Curandera curandera = new Curandera("Curandera");
+		curandera.getEquipamiento().equiparArma(ItemEquipable.cuchilloCriollo()); // Arma básica
+		curandera.getEquipamiento().equiparAccesorio(ItemEquipable.talismanPlata());
+		party.agregarMiembro(curandera);
+
+		// Inventario compartido inicial
 		party.getInventarioCompartido().agregar(ItemConsumible.tortaFrita());
 		party.getInventarioCompartido().agregar(ItemConsumible.mate());
-		party.getInventarioCompartido().agregar(ItemConsumible.pastelito()); // +45 MP para el Mago o Curandera
-		party.getInventarioCompartido().agregar(ItemConsumible.alfajor()); // Consumible mixto
+		party.getInventarioCompartido().agregar(ItemConsumible.pastelito());
+		party.getInventarioCompartido().agregar(ItemConsumible.alfajor());
 
 		return party;
 	}
@@ -73,7 +92,6 @@ public class PartyPersonajes implements Serializable {
 		int porPersona = total / vivos.size();
 		int resto = total % vivos.size();
 
-		// Bucle estructurado tradicional
 		for (int i = 0; i < vivos.size(); i++) {
 			int expAGanar = porPersona;
 			if (i < resto) {
