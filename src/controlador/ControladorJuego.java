@@ -1,24 +1,26 @@
 package controlador;
 
+import dto.EntidadDTO;
+import dto.EstadoBatallaDTO;
 import dto.ResultadoTurno;
 import enums.TipoGeneral;
 import modelo.*;
-import vista.*; // Importación de paquete unificada para evitar omisiones de pantallas
+import vista.*;
 
-import java.io.IOException; // Requerido para la gestión de serialización
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * GRASP Controller Puro.
- * No contiene imports de javax.swing.* ni interactúa directamente con
- * componentes gráficos.
+ * GRASP Controller.
+ * Traduce interacciones por nombres a índices lógicos del modelo y realiza el
+ * mapeo de datos.
  */
 public class ControladorJuego {
 
 	private final GameEngine engine;
 	private VentanaPrincipal ventana;
 
-	// Pantallas del paquete vista (importadas correctamente vía vista.*)
 	private PantallaInicio pantallaInicio;
 	private PantallaBatalla pantallaBatalla;
 	private PantallaEstado pantallaEstado;
@@ -80,10 +82,19 @@ public class ControladorJuego {
 		}
 	}
 
-	public void procesarAtaque(int indiceObjetivo) {
-		MotorCombate motor = engine.getMotorCombate();
-		ResultadoTurno r = motor.procesarTurnoJugador(TipoGeneral.ATACAR, indiceObjetivo);
-		consumirResultadoYContinuar(r);
+	// ─────────────────────────────────────────────────────────────────────────────
+	// PROCESAMIENTO DE ACCIONES POR NOMBRE (DESACOPLADO)
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	public void procesarAtaque(String nombreObjetivo) {
+		int indice = buscarIndiceEnemigoPorNombre(nombreObjetivo);
+		if (indice != -1) {
+			MotorCombate motor = engine.getMotorCombate();
+			ResultadoTurno r = motor.procesarTurnoJugador(TipoGeneral.ATACAR, indice);
+			consumirResultadoYContinuar(r);
+		} else {
+			mostrarMensaje("Objetivo no válido para ataque.");
+		}
 	}
 
 	public void procesarDefensa() {
@@ -92,20 +103,40 @@ public class ControladorJuego {
 		consumirResultadoYContinuar(r);
 	}
 
-	public void procesarHabilidad(int idxHabilidad, int idxObjetivo) {
+	public void procesarHabilidad(int idxHabilidad, String nombreObjetivo) {
 		MotorCombate motor = engine.getMotorCombate();
-		ResultadoTurno r = motor.procesarHabilidadJugador(idxHabilidad, idxObjetivo);
-		consumirResultadoYContinuar(r);
+		int indice = -1;
+
+		Entidad actual = motor.getEntidadEnTurnoActual();
+		if (!(actual instanceof Personaje)) {
+			mostrarMensaje("No es el turno de un héroe.");
+			return;
+		}
+		Personaje heroe = (Personaje) actual;
+
+		Habilidad hab = heroe.getHabilidades().get(idxHabilidad);
+		if (hab.getCantidadCuracion() > 0) {
+			indice = buscarIndiceAliadoPorNombre(nombreObjetivo);
+		} else {
+			indice = buscarIndiceEnemigoPorNombre(nombreObjetivo);
+		}
+
+		if (indice != -1) {
+			ResultadoTurno r = motor.procesarHabilidadJugador(idxHabilidad, indice);
+			consumirResultadoYContinuar(r);
+		} else {
+			mostrarMensaje("Objetivo no válido para habilidad.");
+		}
 	}
 
-	public void procesarItem(int idxItem, int idxObjetivo) {
+	public void procesarItem(int idxItem, String nombreObjetivo) {
 		PartyPersonajes party = engine.getPartyPersonajes();
 		Inventario inv = party.getInventarioCompartido();
-		List<Personaje> vivos = party.getVivos();
+		int idxObjetivo = buscarIndiceAliadoPorNombre(nombreObjetivo);
 
-		if (idxObjetivo >= 0 && idxObjetivo < vivos.size()) {
-			Personaje objetivo = vivos.get(idxObjetivo);
-			String msg = inv.usarConsumible(idxItem, objetivo);
+		if (idxObjetivo != -1) {
+			Personaje objetivo = party.getVivos().get(idxObjetivo);
+			String msg = inv.usarItem(idxItem, objetivo);
 			ResultadoTurno r = engine.getMotorCombate().consumirTurnoPorUsoItem(msg, objetivo.getNombre());
 			consumirResultadoYContinuar(r);
 		}
@@ -116,7 +147,9 @@ public class ControladorJuego {
 		Entidad actual = motor.getEntidadEnTurnoActual();
 
 		if (actual instanceof Personaje) {
-			pantallaEstado.mostrarPersonaje((Personaje) actual);
+			Personaje p = (Personaje) actual;
+			EntidadDTO dto = mapearSinglePersonajeADTO(p);
+			pantallaEstado.mostrarPersonaje(dto);
 			ventana.mostrarPantalla("ESTADO");
 		}
 	}
@@ -133,7 +166,6 @@ public class ControladorJuego {
 			imprimirConsola(re);
 			actualizarVista(re);
 
-			// Animación visual delegada
 			if (re.getAccion() == TipoGeneral.ATACAR || re.getAccion() == TipoGeneral.HABILIDAD) {
 				pantallaBatalla.dispararAnimacionAtaque(re.getNombreAtacante());
 			}
@@ -167,10 +199,8 @@ public class ControladorJuego {
 
 	private void procesarFinBatalla(boolean victoria) {
 		this.ultimaBatallaGanada = victoria;
-		pantallaBatalla.habilitarBotonesAccion(false); // Congela interacción
-
-		// Notificamos a la vista que inicie su temporizador de transición
-		pantallaBatalla.iniciarTemporizadorTransicionFinBatalla();
+		pantallaBatalla.habilitarBotonesAccion(false);
+		pantallaBatalla.iniciarTemporizadorTransitionFinBatalla();
 	}
 
 	public void cambiarAPantallaResultadoFinal() {
@@ -181,12 +211,9 @@ public class ControladorJuego {
 				engine.getPartyPersonajes().distribuirExperiencia(exp);
 			}
 
-			// Si ganaron el nivel 7 (Combate final), el juego ha sido completado
 			if (engine.getNivelActual() == 7) {
 				pantallaResultado.mostrarVictoriaFinal();
 			} else {
-				// CORRECCIÓN: Mostramos la victoria del nivel actual, pero NO avanzamos de
-				// nivel aquí
 				pantallaResultado.mostrarVictoria(exp);
 			}
 		} else {
@@ -197,15 +224,12 @@ public class ControladorJuego {
 
 	public void onContinuarDesdeResultado() {
 		if (ultimaBatallaGanada) {
-			// Si el nivel que acaban de GANAR en batalla era el 7, se termina el juego
 			if (engine.getNivelActual() == 7) {
 				volverAlMenu();
 			} else {
 				restablecerSaludYManaParty();
 				ventana.mostrarPantalla("FOGATA");
 				pantallaFogata.entregarItemsFijos();
-
-				// CORRECCIÓN: El nivel avanza de forma segura aquí, al transicionar a la Fogata
 				engine.avanzarNivel();
 			}
 		} else {
@@ -213,25 +237,113 @@ public class ControladorJuego {
 		}
 	}
 
+	public void onContinuarDesdeFogata() {
+		engine.iniciarNuevoNivel();
+		ventana.mostrarPantalla("BATALLA");
+		refrescarPantallaBatalla();
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// ENCAPSULACIÓN Y MAPEO (POLIMÓRFICO)
+	// ─────────────────────────────────────────────────────────────────────────────
+
 	private void refrescarPantallaBatalla() {
 		MotorCombate motor = engine.getMotorCombate();
-		pantallaBatalla.actualizarBarras(
-				engine.getPartyPersonajes(),
-				motor.getPartyEnemigos(),
-				motor.getEntidadEnTurnoActual(),
-				engine.getNivelActual());
 
-		boolean esTurnoHéroe = motor.esTurnoDePersonaje();
-		pantallaBatalla.habilitarBotonesAccion(esTurnoHéroe);
+		List<EntidadDTO> aliados = mapearListaPersonajes(engine.getPartyPersonajes().getMiembros());
+		List<EntidadDTO> enemigos = mapearListaEnemigos(motor.getPartyEnemigos().getEnemigos());
 
-		// Si es turno de la IA, le indicamos a la vista que controle el retardo
-		if (motor.getEstadoBatalla() == TipoGeneral.EN_CURSO && !esTurnoHéroe) {
+		Entidad actual = motor.getEntidadEnTurnoActual();
+		String nombreTurno = actual != null ? actual.getNombre() : "";
+
+		List<String> nombresItems = new ArrayList<>();
+		Inventario inv = engine.getPartyPersonajes().getInventarioCompartido();
+		for (int i = 0; i < inv.getItems().size(); i++) {
+			nombresItems.add(inv.getItems().get(i).getNombre());
+		}
+
+		EstadoBatallaDTO estadoDTO = new EstadoBatallaDTO(aliados, enemigos, nombreTurno, engine.getNivelActual(),
+				nombresItems);
+
+		pantallaBatalla.actualizarBarras(estadoDTO);
+
+		boolean esTurnoHeroe = motor.esTurnoDePersonaje();
+		pantallaBatalla.habilitarBotonesAccion(esTurnoHeroe);
+
+		if (motor.getEstadoBatalla() == TipoGeneral.EN_CURSO && !esTurnoHeroe) {
 			pantallaBatalla.iniciarTemporizadorTurnoEnemigo();
 		}
 	}
 
 	private void actualizarVista(ResultadoTurno r) {
 		pantallaBatalla.mostrarResultadoTurno(r);
+		refrescarPantallaBatalla();
+	}
+
+	private List<EntidadDTO> mapearListaPersonajes(List<Personaje> personajes) {
+		List<EntidadDTO> lista = new ArrayList<>();
+		for (int i = 0; i < personajes.size(); i++) {
+			lista.add(mapearSinglePersonajeADTO(personajes.get(i)));
+		}
+		return lista;
+	}
+
+	private List<EntidadDTO> mapearListaEnemigos(List<Enemigo> enemigos) {
+		List<EntidadDTO> lista = new ArrayList<>();
+		for (int i = 0; i < enemigos.size(); i++) {
+			Enemigo e = enemigos.get(i);
+			lista.add(new EntidadDTO(
+					e.getNombre(), e.getVidaActual(), e.getVidaMax(), 0, 0,
+					e.estaVivo(), e.tieneEfecto(TipoGeneral.ESCUDO), e.tieneEfecto(TipoGeneral.ATURDIDO),
+					e.getNivel(), 0, "ENEMIGO", e.getAtaque(), e.getDefensa(), e.getVelocidad()));
+		}
+		return lista;
+	}
+
+	private EntidadDTO mapearSinglePersonajeADTO(Personaje p) {
+		return new EntidadDTO(
+				p.getNombre(), p.getVidaActual(), p.getVidaMax(), p.getManaActual(), p.getManaMax(),
+				p.estaVivo(), p.tieneEfecto(TipoGeneral.ESCUDO), p.tieneEfecto(TipoGeneral.ATURDIDO),
+				p.getNivel(), p.getExperiencia(), p.getClase().toString(),
+				p.calcularAtaqueBase(), p.getDefensa(), p.getVelocidad());
+	}
+
+	private int buscarIndiceEnemigoPorNombre(String nombre) {
+		List<Enemigo> vivos = engine.getMotorCombate().getPartyEnemigos().getVivos();
+		for (int i = 0; i < vivos.size(); i++) {
+			if (vivos.get(i).getNombre().equals(nombre)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private int buscarIndiceAliadoPorNombre(String nombre) {
+		List<Personaje> vivos = engine.getPartyPersonajes().getVivos();
+		for (int i = 0; i < vivos.size(); i++) {
+			if (vivos.get(i).getNombre().equals(nombre)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private void restablecerSaludYManaParty() {
+		if (engine.getPartyPersonajes() != null) {
+			for (int i = 0; i < engine.getPartyPersonajes().getMiembros().size(); i++) {
+				Personaje p = engine.getPartyPersonajes().getMiembros().get(i);
+				p.revivirYRestaurar();
+				p.recuperarMana(99999);
+				p.removerEfecto(TipoGeneral.ATURDIDO);
+				p.removerEfecto(TipoGeneral.ESCUDO);
+			}
+		}
+	}
+
+	private void reintentarNivel() {
+		restablecerSaludYManaParty();
+		engine.iniciarNuevoNivel();
+		ventana.mostrarPantalla("BATALLA");
 		refrescarPantallaBatalla();
 	}
 
@@ -249,38 +361,5 @@ public class ControladorJuego {
 		} else {
 			System.out.println(msg);
 		}
-	}
-
-	private void restablecerSaludYManaParty() {
-		if (engine.getPartyPersonajes() != null) {
-			for (int i = 0; i < engine.getPartyPersonajes().getMiembros().size(); i++) {
-				Personaje p = engine.getPartyPersonajes().getMiembros().get(i);
-				p.revivirYRestaurar(); // Levanta al personaje si estaba debilitado (HP=0)
-				p.recuperarMana(99999);
-				p.removerEfecto(TipoGeneral.ATURDIDO);
-				p.removerEfecto(TipoGeneral.ESCUDO);
-			}
-		}
-	}
-
-	private void reintentarNivel() {
-		if (engine.getPartyPersonajes() != null) {
-			for (int i = 0; i < engine.getPartyPersonajes().getMiembros().size(); i++) {
-				Personaje p = engine.getPartyPersonajes().getMiembros().get(i);
-				p.revivirYRestaurar(); // Levanta al personaje si estaba debilitado (HP=0)
-				p.recuperarMana(99999);
-				p.removerEfecto(TipoGeneral.ATURDIDO);
-				p.removerEfecto(TipoGeneral.ESCUDO);
-			}
-		}
-		engine.iniciarNuevoNivel();
-		ventana.mostrarPantalla("BATALLA");
-		refrescarPantallaBatalla();
-	}
-
-	public void onContinuarDesdeFogata() {
-		engine.iniciarNuevoNivel();
-		ventana.mostrarPantalla("BATALLA");
-		refrescarPantallaBatalla();
 	}
 }

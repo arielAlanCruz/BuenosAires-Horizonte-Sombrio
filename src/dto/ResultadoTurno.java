@@ -3,14 +3,10 @@ package dto;
 import enums.TipoGeneral;
 
 /**
- * DTO (Data Transfer Object): describe qué pasó en un turno de combate. Se usa
- * para comunicar Modelo -> Controlador -> Vista.
- *
- * NOTA MVP: - No incluye loot. - experienciaGanada puede ser 0 si la batalla
- * sigue.
- * 
+ * Describe qué pasó en un único turno de combate (Acción transaccional).
+ * Se usa para comunicar: Modelo -> Controlador -> Vista (Log de texto y
+ * animaciones).
  */
-
 public class ResultadoTurno {
 
 	private final TipoGeneral accion;
@@ -20,12 +16,11 @@ public class ResultadoTurno {
 	private final int danio;
 	private final int curacion;
 
-	private final TipoGeneral efectoAplicado; // puede ser null
+	private final TipoGeneral efectoAplicado; // puede ser null (ej. ATURDIDO)
 	private final boolean turnoSalteado;
 
 	private final TipoGeneral estadoBatalla; // EN_CURSO / VICTORIA / DERROTA
 	private final String mensaje;
-
 	private final int experienciaGanada;
 
 	public ResultadoTurno(TipoGeneral accion, String nombreAtacante, String nombreObjetivo, int danio, int curacion,
@@ -83,9 +78,8 @@ public class ResultadoTurno {
 		return experienciaGanada;
 	}
 
-	// Helpers para no repetir mucho código al crear resultados "simples"
+	// Helper para mensajes informativos rápidos
 	public static ResultadoTurno info(String mensaje) {
 		return new ResultadoTurno(null, "", "", 0, 0, null, false, TipoGeneral.EN_CURSO, mensaje, 0);
 	}
-
 }

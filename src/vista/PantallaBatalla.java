@@ -1,22 +1,17 @@
 package vista;
 
 import controlador.ControladorJuego;
+import dto.EntidadDTO;
+import dto.EstadoBatallaDTO;
 import dto.ResultadoTurno;
-import modelo.PartyEnemigos;
-import modelo.PartyPersonajes;
-import modelo.Personaje;
-import modelo.Enemigo;
-import modelo.Habilidad;
-import modelo.Item;
-import modelo.Inventario;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.List;
 
 public class PantallaBatalla extends JPanel {
 
-	// Constantes de diseño centralizadas
 	private static final Color COLOR_FONDO = new Color(24, 24, 28);
 	private static final Color COLOR_CABECERA = new Color(30, 30, 36);
 	private static final Color COLOR_BORDE_DORADO = new Color(241, 196, 15);
@@ -25,13 +20,6 @@ public class PantallaBatalla extends JPanel {
 	private static final Color COLOR_HP_ALIADO = new Color(46, 204, 113);
 	private static final Color COLOR_MP_ALIADO = new Color(52, 152, 219);
 	private static final Color COLOR_HP_ENEMIGO = new Color(231, 76, 60);
-
-	private static final Color COLOR_BTN_ATAQUE = Color.BLACK;
-	private static final Color COLOR_BTN_DEFENSA = new Color(41, 128, 185);
-	private static final Color COLOR_BTN_HABILIDAD = new Color(142, 68, 173);
-	private static final Color COLOR_BTN_ITEM = new Color(230, 126, 34);
-	private static final Color COLOR_BTN_ESTADO = new Color(39, 174, 96);
-	private static final Color COLOR_BTN_GUARDAR = Color.DARK_GRAY;
 
 	private final ControladorJuego controlador;
 	private final PanelEscenario panelEscenario;
@@ -46,6 +34,10 @@ public class PantallaBatalla extends JPanel {
 	private final JButton btnItem;
 	private final JButton btnEstado;
 	private final JButton btnGuardar;
+
+	private List<EntidadDTO> aliadosActuales;
+	private List<EntidadDTO> enemigosActuales;
+	private List<String> nombresItemsActuales; // Lista dinámica de ítems desde el DTO
 
 	public PantallaBatalla(ControladorJuego controlador) {
 		this.controlador = controlador;
@@ -93,14 +85,13 @@ public class PantallaBatalla extends JPanel {
 		btnEstado = new JButton("VER ESTADO");
 		btnGuardar = new JButton("GUARDAR");
 
-		estilarBoton(btnAtacar, COLOR_BTN_ATAQUE, Color.WHITE);
-		estilarBoton(btnDefender, COLOR_BTN_DEFENSA, Color.WHITE);
-		estilarBoton(btnHabilidad, COLOR_BTN_HABILIDAD, Color.WHITE);
-		estilarBoton(btnItem, COLOR_BTN_ITEM, Color.WHITE);
-		estilarBoton(btnEstado, COLOR_BTN_ESTADO, Color.WHITE);
-		estilarBoton(btnGuardar, COLOR_BTN_GUARDAR, Color.WHITE);
+		estilarBoton(btnAtacar, Color.BLACK, Color.WHITE);
+		estilarBoton(btnDefender, new Color(41, 128, 185), Color.WHITE);
+		estilarBoton(btnHabilidad, new Color(142, 68, 173), Color.WHITE);
+		estilarBoton(btnItem, new Color(230, 126, 34), Color.WHITE);
+		estilarBoton(btnEstado, new Color(39, 174, 96), Color.WHITE);
+		estilarBoton(btnGuardar, Color.DARK_GRAY, Color.WHITE);
 
-		// Los Listeners capturan el evento físico de la UI y gestionan la delegación
 		btnAtacar.addActionListener(e -> gestionarClicAtaque());
 		btnDefender.addActionListener(e -> controlador.procesarDefensa());
 		btnHabilidad.addActionListener(e -> gestionarClicHabilidad());
@@ -123,8 +114,12 @@ public class PantallaBatalla extends JPanel {
 	}
 
 	private void gestionarClicAtaque() {
-		modelo.MotorCombate motor = modelo.GameEngine.getInstance().getMotorCombate();
-		java.util.List<Enemigo> vivos = motor.getPartyEnemigos().getVivos();
+		if (enemigosActuales == null || enemigosActuales.isEmpty()) {
+			mostrarMensajeLocal("No hay enemigos disponibles.");
+			return;
+		}
+
+		List<EntidadDTO> vivos = obtenerVivos(enemigosActuales);
 		if (vivos.isEmpty()) {
 			mostrarMensajeLocal("No hay enemigos vivos a los que atacar.");
 			return;
@@ -139,96 +134,57 @@ public class PantallaBatalla extends JPanel {
 				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
 
 		if (idx >= 0) {
-			controlador.procesarAtaque(idx);
+			controlador.procesarAtaque(vivos.get(idx).getNombre());
 		}
 	}
 
 	private void gestionarClicHabilidad() {
-		modelo.MotorCombate motor = modelo.GameEngine.getInstance().getMotorCombate();
-		modelo.Entidad actual = motor.getEntidadEnTurnoActual();
-
-		if (!(actual instanceof Personaje)) {
-			mostrarMensajeLocal("No es el turno de un personaje.");
+		if (aliadosActuales == null || enemigosActuales == null) {
 			return;
 		}
 
-		Personaje p = (Personaje) actual;
-		java.util.List<Habilidad> habilidades = p.getHabilidades();
-		if (habilidades.isEmpty()) {
-			mostrarMensajeLocal("No hay habilidades disponibles.");
+		String nombreTurno = lblTurnoActual.getText().replace("Turno activo: ", "").trim();
+		boolean esCuracion = nombreTurno.toLowerCase().contains("curandera");
+
+		List<EntidadDTO> objetivosDisponibles = esCuracion
+				? obtenerVivos(aliadosActuales)
+				: obtenerVivos(enemigosActuales);
+
+		if (objetivosDisponibles.isEmpty()) {
+			mostrarMensajeLocal("No hay objetivos vivos disponibles.");
 			return;
 		}
 
-		String[] opciones = new String[habilidades.size()];
-		for (int i = 0; i < habilidades.size(); i++) {
-			Habilidad h = habilidades.get(i);
-			opciones[i] = h.getNombre() + " (MP " + h.getCosteMana() + ")";
+		String[] objNombres = new String[objetivosDisponibles.size()];
+		for (int i = 0; i < objetivosDisponibles.size(); i++) {
+			objNombres[i] = objetivosDisponibles.get(i).getNombre() + " (HP "
+					+ objetivosDisponibles.get(i).getVidaActual() + ")";
 		}
 
-		int idxHab = JOptionPane.showOptionDialog(this, "Elegí una habilidad:", "Habilidad", JOptionPane.DEFAULT_OPTION,
-				JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
+		int idxObj = JOptionPane.showOptionDialog(this, "Elegí el objetivo de la habilidad especial:", "Habilidad",
+				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, objNombres, objNombres[0]);
 
-		if (idxHab < 0)
-			return;
-
-		Habilidad habSel = habilidades.get(idxHab);
-		int objetivoIdx = -1;
-
-		if (habSel.getCantidadCuracion() > 0) {
-			java.util.List<Personaje> vivos = motor.getPartyPersonajes().getVivos();
-			if (vivos.isEmpty()) {
-				mostrarMensajeLocal("No hay aliados vivos para curar.");
-				return;
-			}
-			String[] objOpciones = new String[vivos.size()];
-			for (int i = 0; i < vivos.size(); i++) {
-				objOpciones[i] = vivos.get(i).getNombre() + " (HP " + vivos.get(i).getVidaActual() + ")";
-			}
-			objetivoIdx = JOptionPane.showOptionDialog(this, "Elegí un aliado a curar:", "Objetivo",
-					JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, objOpciones, objOpciones[0]);
-		} else {
-			java.util.List<Enemigo> vivos = motor.getPartyEnemigos().getVivos();
-			if (vivos.isEmpty()) {
-				mostrarMensajeLocal("No hay enemigos vivos para atacar.");
-				return;
-			}
-			String[] objOpciones = new String[vivos.size()];
-			for (int i = 0; i < vivos.size(); i++) {
-				objOpciones[i] = vivos.get(i).getNombre() + " (HP " + vivos.get(i).getVidaActual() + ")";
-			}
-			objetivoIdx = JOptionPane.showOptionDialog(this, "Elegí un enemigo a atacar:", "Objetivo",
-					JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, objOpciones, objOpciones[0]);
-		}
-
-		if (objetivoIdx >= 0) {
-			controlador.procesarHabilidad(idxHab, objetivoIdx);
+		if (idxObj >= 0) {
+			controlador.procesarHabilidad(0, objetivosDisponibles.get(idxObj).getNombre());
 		}
 	}
 
 	private void gestionarClicItem() {
-		PartyPersonajes party = modelo.GameEngine.getInstance().getPartyPersonajes();
-		Inventario inv = party.getInventarioCompartido();
-
-		if (!inv.tieneItems()) {
+		if (nombresItemsActuales == null || nombresItemsActuales.isEmpty()) {
 			mostrarMensajeLocal("No hay ítems en el inventario compartido.");
 			return;
 		}
 
-		java.util.List<Item> items = inv.getItems();
-		String[] opcionesItems = new String[items.size()];
-		for (int i = 0; i < items.size(); i++) {
-			opcionesItems[i] = items.get(i).getNombre() + " - " + items.get(i).getDescripcion();
-		}
-
-		// CORRECCIÓN: Se cambió JOptionPane.OPTION_TYPE_DEFAULT por
-		// JOptionPane.DEFAULT_OPTION
-		int idxItem = JOptionPane.showOptionDialog(this, "Elegí un ítem para consumir:", "Inventario Compartido",
+		// Poblamos dinámicamente las opciones del JOptionPane desde la lista del DTO
+		String[] opcionesItems = nombresItemsActuales.toArray(new String[0]);
+		int idxItem = JOptionPane.showOptionDialog(this, "Elegí un ítem para usar (Pociones o Armas):",
+				"Inventario Compartido",
 				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opcionesItems, opcionesItems[0]);
 
 		if (idxItem < 0)
 			return;
 
-		java.util.List<Personaje> vivos = party.getVivos();
+		List<EntidadDTO> vivos = obtenerVivos(aliadosActuales);
 		if (vivos.isEmpty()) {
 			mostrarMensajeLocal("No hay personajes vivos para utilizar el ítem.");
 			return;
@@ -243,8 +199,18 @@ public class PantallaBatalla extends JPanel {
 				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opcionesObjetivo, opcionesObjetivo[0]);
 
 		if (idxObj >= 0) {
-			controlador.procesarItem(idxItem, idxObj);
+			controlador.procesarItem(idxItem, vivos.get(idxObj).getNombre());
 		}
+	}
+
+	private List<EntidadDTO> obtenerVivos(List<EntidadDTO> lista) {
+		List<EntidadDTO> vivos = new java.util.ArrayList<>();
+		for (int i = 0; i < lista.size(); i++) {
+			if (lista.get(i).isEstaVivo()) {
+				vivos.add(lista.get(i));
+			}
+		}
+		return vivos;
 	}
 
 	public void iniciarTemporizadorTurnoEnemigo() {
@@ -256,7 +222,7 @@ public class PantallaBatalla extends JPanel {
 		timer.start();
 	}
 
-	public void iniciarTemporizadorTransicionFinBatalla() {
+	public void iniciarTemporizadorTransitionFinBatalla() {
 		habilitarBotonesAccion(false);
 		Timer timer = new Timer(1500, e -> {
 			controlador.cambiarAPantallaResultadoFinal();
@@ -265,25 +231,28 @@ public class PantallaBatalla extends JPanel {
 		timer.start();
 	}
 
-	public void actualizarBarras(PartyPersonajes party, PartyEnemigos enemigos, modelo.Entidad entidadEnTurno,
-			int nivelActual) {
-		panelEscenario.actualizarEscenario(party, enemigos, nivelActual);
+	public void actualizarBarras(EstadoBatallaDTO estado) {
+		this.aliadosActuales = estado.getAliados();
+		this.enemigosActuales = estado.getEnemigos();
+		this.nombresItemsActuales = estado.getNombresItemsInventario(); // Copia la lista de ítems dinámicos
 
-		if (entidadEnTurno != null) {
-			lblTurnoActual.setText("Turno activo: " + entidadEnTurno.getNombre());
+		panelEscenario.actualizarEscenario(estado.getAliados(), estado.getEnemigos(), estado.getNivelActual());
+
+		if (estado.getNombreEntidadTurnoActual() != null && !estado.getNombreEntidadTurnoActual().isEmpty()) {
+			lblTurnoActual.setText("Turno activo: " + estado.getNombreEntidadTurnoActual());
 		}
 
 		panelAliados.removeAll();
-		if (party != null) {
-			for (int i = 0; i < party.getMiembros().size(); i++) {
-				panelAliados.add(crearFilaEstadoAliado(party.getMiembros().get(i)));
+		if (estado.getAliados() != null) {
+			for (int i = 0; i < estado.getAliados().size(); i++) {
+				panelAliados.add(crearFilaEstadoAliado(estado.getAliados().get(i)));
 			}
 		}
 
 		panelEnemigos.removeAll();
-		if (enemigos != null) {
-			for (int i = 0; i < enemigos.getEnemigos().size(); i++) {
-				panelEnemigos.add(crearFilaEstadoEnemigo(enemigos.getEnemigos().get(i)));
+		if (estado.getEnemigos() != null) {
+			for (int i = 0; i < estado.getEnemigos().size(); i++) {
+				panelEnemigos.add(crearFilaEstadoEnemigo(estado.getEnemigos().get(i)));
 			}
 		}
 
@@ -293,7 +262,7 @@ public class PantallaBatalla extends JPanel {
 		panelEnemigos.repaint();
 	}
 
-	private JPanel crearFilaEstadoAliado(Personaje p) {
+	private JPanel crearFilaEstadoAliado(EntidadDTO p) {
 		JPanel panel = new JPanel(new GridBagLayout());
 		panel.setOpaque(false);
 		GridBagConstraints gbc = new GridBagConstraints();
@@ -377,7 +346,7 @@ public class PantallaBatalla extends JPanel {
 		return panel;
 	}
 
-	private JPanel crearFilaEstadoEnemigo(Enemigo e) {
+	private JPanel crearFilaEstadoEnemigo(EntidadDTO e) {
 		JPanel panel = new JPanel(new GridBagLayout());
 		panel.setOpaque(false);
 		GridBagConstraints gbc = new GridBagConstraints();

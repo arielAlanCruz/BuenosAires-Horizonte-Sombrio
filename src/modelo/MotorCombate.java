@@ -3,7 +3,6 @@ package modelo;
 import dto.ResultadoTurno;
 import enums.TipoGeneral;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class MotorCombate {
@@ -22,30 +21,50 @@ public class MotorCombate {
 		ordenTurnos.clear();
 		indiceTurno = 0;
 
-		// Bucle for clásico para añadir héroes vivos
-		for (int i = 0; i < partyPersonajes.getMiembros().size(); i++) {
-			ordenTurnos.add(partyPersonajes.getMiembros().get(i));
+		// 1. Extraemos las listas de combatientes
+		List<Personaje> heroes = new ArrayList<>(partyPersonajes.getMiembros());
+		List<Enemigo> listaEnemigos = new ArrayList<>(partyEnemigos.getEnemigos());
+
+		// 2. Ordenamos ambas listas por velocidad usando expresiones Lambda
+		heroes.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
+		listaEnemigos.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
+
+		// 3. Comparamos los líderes para definir quién gana la Iniciativa Macro
+		boolean heroesGananIniciativa = true;
+		if (!listaEnemigos.isEmpty() && !heroes.isEmpty()) {
+			heroesGananIniciativa = heroes.get(0).getVelocidad() >= listaEnemigos.get(0).getVelocidad();
 		}
 
-		// Bucle for clásico para añadir enemigos
-		for (int i = 0; i < partyEnemigos.getEnemigos().size(); i++) {
-			ordenTurnos.add(partyEnemigos.getEnemigos().get(i));
+		// 4. Fragmentación Dinámica: Dividimos en Vanguardia (Top 2) y Retaguardia
+		// (Resto)
+		List<Entidad> vanguardiaHeroes = extraerSubListaSegura(heroes, 0, 2);
+		List<Entidad> retaguardiaHeroes = extraerSubListaSegura(heroes, 2, heroes.size());
+
+		List<Entidad> vanguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 0, 2);
+		List<Entidad> retaguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 2, listaEnemigos.size());
+
+		// 5. Ensamblamos el orden final entrelazando las vanguardias y retaguardias
+		if (heroesGananIniciativa) {
+			ordenTurnos.addAll(vanguardiaHeroes);
+			ordenTurnos.addAll(vanguardiaEnemigos);
+			ordenTurnos.addAll(retaguardiaHeroes);
+			ordenTurnos.addAll(retaguardiaEnemigos);
+		} else {
+			ordenTurnos.addAll(vanguardiaEnemigos);
+			ordenTurnos.addAll(vanguardiaHeroes);
+			ordenTurnos.addAll(retaguardiaEnemigos);
+			ordenTurnos.addAll(retaguardiaHeroes);
 		}
 
-		// Ordenamiento por velocidad usando clase anónima clásica
-		ordenTurnos.sort(new Comparator<Entidad>() {
-			@Override
-			public int compare(Entidad o1, Entidad o2) {
-				// Orden descendente (mayor velocidad primero)
-				if (o1.getVelocidad() < o2.getVelocidad()) {
-					return 1;
-				} else if (o1.getVelocidad() > o2.getVelocidad()) {
-					return -1;
-				}
-				return 0;
-			}
-		});
 		avanzarHastaEntidadViva();
+	}
+
+	private List<Entidad> extraerSubListaSegura(List<? extends Entidad> lista, int desde, int hasta) {
+		List<Entidad> subLista = new ArrayList<>();
+		for (int i = desde; i < hasta && i < lista.size(); i++) {
+			subLista.add(lista.get(i));
+		}
+		return subLista;
 	}
 
 	public TipoGeneral getEstadoBatalla() {
@@ -132,15 +151,12 @@ public class MotorCombate {
 						"Acción no soportada.", 0);
 		}
 
-		// 1. Verificamos el estado real de la batalla tras procesar la acción
 		this.estadoBatalla = verificarFinBatalla();
 
 		if (this.estadoBatalla == TipoGeneral.EN_CURSO) {
 			avanzarTurno();
 		}
 
-		// 2. Reconstruimos el DTO con el estado real final de la batalla (Previene
-		// congelamiento de pantalla)
 		return new ResultadoTurno(
 				resultado.getAccion(),
 				resultado.getNombreAtacante(),
@@ -149,7 +165,7 @@ public class MotorCombate {
 				resultado.getCuracion(),
 				resultado.getEfectoAplicado(),
 				resultado.isTurnoSalteado(),
-				this.estadoBatalla, // Estado de batalla real actualizado
+				this.estadoBatalla,
 				resultado.getMensaje(),
 				resultado.getExperienciaGanada());
 	}

@@ -1,11 +1,6 @@
 package vista;
 
-import modelo.PartyEnemigos;
-import modelo.PartyPersonajes;
-import modelo.Personaje;
-import modelo.Enemigo;
-import modelo.Entidad;
-import enums.TipoGeneral;
+import dto.EntidadDTO;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,8 +13,8 @@ import java.util.Map;
 public class PanelEscenario extends JPanel {
 
 	private Image imgFondo;
-	private PartyPersonajes partyActual;
-	private PartyEnemigos enemigosActual;
+	private java.util.List<EntidadDTO> partyActual;
+	private java.util.List<EntidadDTO> enemigosActual;
 
 	private String nombreAtacando = null;
 	private String mensajeCombate = "¡Comienza el combate!";
@@ -31,20 +26,19 @@ public class PanelEscenario extends JPanel {
 		setBackground(Color.DARK_GRAY);
 	}
 
-	public void actualizarEscenario(PartyPersonajes party, PartyEnemigos enemigos, int nivelActual) {
+	public void actualizarEscenario(java.util.List<EntidadDTO> party, java.util.List<EntidadDTO> enemigos,
+			int nivelActual) {
 		this.partyActual = party;
 		this.enemigosActual = enemigos;
 
-		// Selección estricta del fondo en base a la secuencia oficial de combates (1 a
-		// 7)
-		String rutaFondo = "/img/Nivel1.png"; // Ombú seco por defecto (Zona 1: Combates 1 y 2)
+		String rutaFondo = "/img/Nivel1.png";
 
 		if (nivelActual == 3 || nivelActual == 4) {
-			rutaFondo = "/img/Nivel2.png"; // Villa Miseria (Zona 2: Combates 3 y 4)
+			rutaFondo = "/img/Nivel2.png";
 		} else if (nivelActual == 5 || nivelActual == 6) {
-			rutaFondo = "/img/Nivel3.png"; // Obelisco lluvioso (Zona 3: Combates 5 y 6)
+			rutaFondo = "/img/Nivel3.png";
 		} else if (nivelActual >= 7) {
-			rutaFondo = "/img/NivelFinal.png"; // Casa Rosada (Zona Final: Combate 7)
+			rutaFondo = "/img/NivelFinal.png";
 		}
 
 		this.imgFondo = cargarRecurso(rutaFondo);
@@ -87,30 +81,26 @@ public class PanelEscenario extends JPanel {
 		if (partyActual != null) {
 			double[] xRatios = { 0.08, 0.15, 0.08, 0.15 };
 			double[] yRatios = { 0.40, 0.52, 0.64, 0.76 };
-			int index = 0;
-			for (int i = 0; i < partyActual.getMiembros().size(); i++) {
-				Personaje p = partyActual.getMiembros().get(i);
-				if (p.estaVivo() && index < yRatios.length) {
-					int x = (int) (getWidth() * xRatios[index]);
-					int y = (int) (getHeight() * yRatios[index]) - (size / 2);
+			for (int i = 0; i < partyActual.size(); i++) {
+				EntidadDTO p = partyActual.get(i);
+				if (p.isEstaVivo() && i < yRatios.length) {
+					int x = (int) (getWidth() * xRatios[i]);
+					int y = (int) (getHeight() * yRatios[i]) - (size / 2);
 					dibujarEntidad(g2d, p, x, y, size, true);
 				}
-				index++;
 			}
 		}
 
 		if (enemigosActual != null) {
 			double[] xRatios = { 0.82, 0.75, 0.82, 0.75 };
 			double[] yRatios = { 0.40, 0.52, 0.64, 0.76 };
-			int index = 0;
-			for (int i = 0; i < enemigosActual.getEnemigos().size(); i++) {
-				Enemigo e = enemigosActual.getEnemigos().get(i);
-				if (e.estaVivo() && index < yRatios.length) {
-					int x = (int) (getWidth() * xRatios[index]);
-					int y = (int) (getHeight() * yRatios[index]) - (size / 2);
+			for (int i = 0; i < enemigosActual.size(); i++) {
+				EntidadDTO e = enemigosActual.get(i);
+				if (e.isEstaVivo() && i < yRatios.length) {
+					int x = (int) (getWidth() * xRatios[i]);
+					int y = (int) (getHeight() * yRatios[i]) - (size / 2);
 					dibujarEntidad(g2d, e, x, y, size, false);
 				}
-				index++;
 			}
 		}
 
@@ -123,7 +113,7 @@ public class PanelEscenario extends JPanel {
 		}
 	}
 
-	private void dibujarEntidad(Graphics2D g2d, Entidad entidad, int x, int y, int size, boolean esAliado) {
+	private void dibujarEntidad(Graphics2D g2d, EntidadDTO entidad, int x, int y, int size, boolean esAliado) {
 		String nombreLower = entidad.getNombre().toLowerCase();
 		String archivoSprite = determinarRutaSprite(nombreLower, esAliado);
 		Image sprite = cargarRecurso("/img/sprites/" + archivoSprite);
@@ -144,7 +134,7 @@ public class PanelEscenario extends JPanel {
 			g2d.drawString(entidad.getNombre(), xActual + 5, y + (size / 2));
 		}
 
-		if (entidad.tieneEfecto(TipoGeneral.ESCUDO)) {
+		if (entidad.isTieneEscudo()) {
 			g2d.setColor(new Color(30, 144, 255, 130));
 			g2d.setStroke(new BasicStroke(3));
 			g2d.drawOval(xActual - 5, y - 5, size + 10, size + 10);

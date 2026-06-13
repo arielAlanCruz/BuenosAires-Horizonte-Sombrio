@@ -8,7 +8,6 @@ public class ItemConsumible extends Item {
 	public ItemConsumible(String nombre, String descripcion, int vidaRecuperada, int manaRecuperado) {
 		super(nombre, descripcion);
 
-		// Reemplazamos Math.max por if/else tradicional
 		if (vidaRecuperada < 0) {
 			this.vidaRecuperada = 0;
 		} else {
@@ -49,7 +48,7 @@ public class ItemConsumible extends Item {
 	}
 
 	@Override
-	public String consumir(Personaje objetivo) {
+	public String usar(Personaje objetivo, Inventario inv) {
 		if (objetivo == null) {
 			System.out.println("DEBUG: Falló. Objetivo es nulo.");
 			return "No se puede usar en este objetivo.";
@@ -65,7 +64,6 @@ public class ItemConsumible extends Item {
 
 		this.aplicarA(objetivo);
 
-		// Calculamos cuánto ganó realmente sin usar Math.max()
 		int vidaGanada = objetivo.getVidaActual() - vidaAntes;
 		if (vidaGanada < 0) {
 			vidaGanada = 0;
@@ -76,7 +74,6 @@ public class ItemConsumible extends Item {
 			manaGanado = 0;
 		}
 
-		// Armamos el texto sumando palabras de forma tradicional
 		String resultado = objetivo.getNombre() + " usa " + getNombre() + ".";
 
 		if (vidaGanada > 0) {

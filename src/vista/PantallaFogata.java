@@ -3,16 +3,12 @@ package vista;
 import controlador.ControladorJuego;
 import modelo.GameEngine;
 import modelo.ItemConsumible;
+import modelo.ItemEquipable;
 
 import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
 
-/**
- * Fogata (MVP):
- * - Entrega 2-3 items fijos al inventario compartido.
- * - Luego continuar al siguiente nivel.
- */
 public class PantallaFogata extends JPanel {
 
     private final ControladorJuego controlador;
@@ -24,7 +20,6 @@ public class PantallaFogata extends JPanel {
 
         setLayout(new BorderLayout(10, 10));
 
-        // Cargar imagen de fondo
         URL url = getClass().getResource("/img/Fogata.png");
         if (url != null) {
             imgFondo = new ImageIcon(url).getImage();
@@ -71,14 +66,17 @@ public class PantallaFogata extends JPanel {
         if (engine.getPartyPersonajes() == null)
             return;
 
-        // Entrega de suministros mejorada en el campamento
+        // Consumibles
         engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.tortaFrita());
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.mate());
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.guiso());
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.pastelito());
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.asado()); // Suministro de curación
-                                                                                               // alta
+        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.asado());
 
-        lblInfo.setText("Suministros recogidos: Torta frita, Mate, Guiso, Pastelito y Asado de tira.");
+        // ENTREGAS DE ARMAS: Agregamos equipamiento interactivo polimórfico al
+        // inventario compartido
+        engine.getPartyPersonajes().getInventarioCompartido().agregar(
+                new ItemEquipable("Cuchillo de Plata", "Arma legendaria (+8 ATQ).", ItemEquipable.SLOT_ARMA, 8, 0, 0));
+        engine.getPartyPersonajes().getInventarioCompartido().agregar(new ItemEquipable("Poncho de Alpaca",
+                "Accesorio protector (+4 DEF, +2 VEL).", ItemEquipable.SLOT_ACCESORIO, 0, 4, 2));
+
+        lblInfo.setText("Suministros recogidos: Torta Frita, Asado de Tira, Cuchillo de Plata y Poncho de Alpaca.");
     }
 }

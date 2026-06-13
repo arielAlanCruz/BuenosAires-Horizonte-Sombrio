@@ -9,7 +9,6 @@ public abstract class Item implements Serializable {
 	private final String descripcion;
 
 	protected Item(String nombre, String descripcion) {
-		// Validación con if clásico sin operadores ternarios
 		if (nombre != null) {
 			this.nombre = nombre;
 		} else {
@@ -23,11 +22,8 @@ public abstract class Item implements Serializable {
 		}
 	}
 
-	// Por defecto, un ítem no se puede consumir
-	public String consumir(Personaje objetivo) {
-		System.out.println("DEBUG: Intentando consumir " + this.nombre + " -> Falló, no es consumible.");
-		return null;
-	}
+	// Método polimórfico universal de uso
+	public abstract String usar(Personaje objetivo, Inventario inv);
 
 	public String getNombre() {
 		return nombre;

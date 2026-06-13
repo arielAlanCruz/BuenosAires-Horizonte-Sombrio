@@ -15,11 +15,7 @@ public class Inventario implements Serializable {
 	}
 
 	public boolean tieneItems() {
-		if (items.isEmpty() == true) {
-			return false;
-		} else {
-			return true;
-		}
+		return !items.isEmpty();
 	}
 
 	public void agregar(Item item) {
@@ -29,44 +25,32 @@ public class Inventario implements Serializable {
 	}
 
 	public Item getItem(int indice) {
-		if (indice < 0) {
-			return null;
-		}
-		if (indice >= items.size()) {
+		if (indice < 0 || indice >= items.size()) {
 			return null;
 		}
 		return items.get(indice);
 	}
 
 	public void eliminar(int indice) {
-		if (indice < 0) {
-			return;
+		if (indice >= 0 && indice < items.size()) {
+			items.remove(indice);
 		}
-		if (indice >= items.size()) {
-			return;
-		}
-		items.remove(indice);
 	}
 
-	public String usarConsumible(int indice, Personaje objetivo) {
+	public String usarItem(int indice, Personaje objetivo) {
 		Item item = getItem(indice);
-
 		if (item == null) {
 			return "Ítem no encontrado.";
 		}
 
-		System.out.println("DEBUG: Inventario ordenando usar el ítem...");
+		// Invocación polimórfica: pasamos el objetivo y la referencia al inventario
+		String resultadoUso = item.usar(objetivo, this);
 
-		// Le pasamos la responsabilidad al ítem
-		String resultadoUso = item.consumir(objetivo);
-
-		// Evaluamos el resultado con un if simple
 		if (resultadoUso != null) {
-			eliminar(indice);
-			System.out.println("DEBUG: Inventario eliminó el ítem consumido.");
+			eliminar(indice); // Se remueve el ítem consumido o equipado del inventario
 			return resultadoUso;
 		} else {
-			return "Ese ítem no es consumible.";
+			return "Este ítem no se puede usar.";
 		}
 	}
 }
