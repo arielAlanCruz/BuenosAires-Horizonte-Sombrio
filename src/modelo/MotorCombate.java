@@ -21,29 +21,23 @@ public class MotorCombate {
 		ordenTurnos.clear();
 		indiceTurno = 0;
 
-		// 1. Extraemos las listas de combatientes
 		List<Personaje> heroes = new ArrayList<>(partyPersonajes.getMiembros());
 		List<Enemigo> listaEnemigos = new ArrayList<>(partyEnemigos.getEnemigos());
 
-		// 2. Ordenamos ambas listas por velocidad usando expresiones Lambda
 		heroes.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
 		listaEnemigos.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
 
-		// 3. Comparamos los líderes para definir quién gana la Iniciativa Macro
 		boolean heroesGananIniciativa = true;
 		if (!listaEnemigos.isEmpty() && !heroes.isEmpty()) {
 			heroesGananIniciativa = heroes.get(0).getVelocidad() >= listaEnemigos.get(0).getVelocidad();
 		}
 
-		// 4. Fragmentación Dinámica: Dividimos en Vanguardia (Top 2) y Retaguardia
-		// (Resto)
 		List<Entidad> vanguardiaHeroes = extraerSubListaSegura(heroes, 0, 2);
 		List<Entidad> retaguardiaHeroes = extraerSubListaSegura(heroes, 2, heroes.size());
 
 		List<Entidad> vanguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 0, 2);
 		List<Entidad> retaguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 2, listaEnemigos.size());
 
-		// 5. Ensamblamos el orden final entrelazando las vanguardias y retaguardias
 		if (heroesGananIniciativa) {
 			ordenTurnos.addAll(vanguardiaHeroes);
 			ordenTurnos.addAll(vanguardiaEnemigos);
@@ -285,12 +279,8 @@ public class MotorCombate {
 	}
 
 	private int calcularDanio(Entidad atacante, Entidad objetivo) {
-		int ataqueTotal;
-		if (atacante instanceof Personaje) {
-			ataqueTotal = ((Personaje) atacante).calcularAtaqueBase();
-		} else {
-			ataqueTotal = atacante.getAtaque();
-		}
+		// Reemplazo polimórfico del condicional manual por getAtaqueEfectivo()
+		int ataqueTotal = atacante.getAtaqueEfectivo();
 
 		int defensaFinal = objetivo.getDefensa();
 

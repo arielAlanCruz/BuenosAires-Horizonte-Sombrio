@@ -40,6 +40,35 @@ public class PantallaEstado extends JPanel {
             return;
         }
 
+        // Selección de la biografía/historia temática según la clase
+        String historia;
+        switch (p.getClase().toUpperCase()) {
+            case "GUERRERO":
+                historia = "Un gaucho recio de las pampas bonaerenses. Defensor de la tradición, su\n" +
+                        "facón criollo y su poncho son su único resguardo contra las sombras que\n" +
+                        "brotan del Obelisco lluvioso.";
+                break;
+            case "MAGO":
+                historia = "Hechicero pampeano que aprendió los misterios rúnicos de los montes de\n" +
+                        "Caranday. Canaliza el misticismo del viento Pampero para azotar a las\n" +
+                        "bestias oscuras del horizonte.";
+                break;
+            case "ARQUERO":
+                historia = "Rastreador silencioso originario de los humedales del Paraná. Con su\n" +
+                        "arco reforzado tallado en madera dura de Guayacán, caza desde las\n" +
+                        "sombras con precisión letal.";
+                break;
+            case "CURANDERA":
+                historia = "Matriarca y médica yuyera de las afueras rurales. Utiliza la sabiduría\n" +
+                        "de la plata criolla y hierbas medicinales pampeanas para remendar y\n" +
+                        "resguardar el alma de sus compañeros.";
+                break;
+            default:
+                historia = "Un valiente combatiente de Buenos Aires que resiste con entereza en el\n" +
+                        "Horizonte Sombrío.";
+                break;
+        }
+
         String texto = ""
                 + "Nombre: " + p.getNombre() + "\n"
                 + "Clase: " + p.getClase() + "\n"
@@ -51,9 +80,18 @@ public class PantallaEstado extends JPanel {
                 + "Defensa Total: " + p.getDefensaTotal() + "\n"
                 + "Velocidad Total: " + p.getVelocidadTotal() + "\n"
                 + "\n"
-                + "Estados:\n"
+                + "Equipamiento Activo:\n"
+                + " - [Arma]:      " + p.getNombreArma() + "\n"
+                + " - [Accesorio]: " + p.getNombreAccesorio() + "\n"
+                + "\n"
+                + "Estados Activos:\n"
                 + " - ATURDIDO: " + (p.isTieneAturdido() ? "SI" : "NO") + "\n"
-                + " - ESCUDO: " + (p.isTieneEscudo() ? "SI" : "NO") + "\n";
+                + " - ESCUDO:    " + (p.isTieneEscudo() ? "SI" : "NO") + "\n"
+                + "\n"
+                + "─────────────────────────────────────────────────────────────────────────────\n"
+                + "Trasfondo Histórico:\n"
+                + historia + "\n"
+                + "─────────────────────────────────────────────────────────────────────────────\n";
 
         area.setText(texto);
     }

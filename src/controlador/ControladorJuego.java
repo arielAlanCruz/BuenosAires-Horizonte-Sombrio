@@ -28,6 +28,7 @@ public class ControladorJuego {
 	private PantallaFogata pantallaFogata;
 
 	private static final String SAVE_FILE = "partida.dat";
+	private static final int NIVEL_FINAL = 7;
 	private boolean ultimaBatallaGanada = false;
 
 	public ControladorJuego() {
@@ -81,10 +82,6 @@ public class ControladorJuego {
 			mostrarMensaje("No se pudo guardar la partida: " + ex.getMessage());
 		}
 	}
-
-	// ─────────────────────────────────────────────────────────────────────────────
-	// PROCESAMIENTO DE ACCIONES POR NOMBRE (DESACOPLADO)
-	// ─────────────────────────────────────────────────────────────────────────────
 
 	public void procesarAtaque(String nombreObjetivo) {
 		int indice = buscarIndiceEnemigoPorNombre(nombreObjetivo);
@@ -211,7 +208,7 @@ public class ControladorJuego {
 				engine.getPartyPersonajes().distribuirExperiencia(exp);
 			}
 
-			if (engine.getNivelActual() == 7) {
+			if (engine.getNivelActual() == NIVEL_FINAL) {
 				pantallaResultado.mostrarVictoriaFinal();
 			} else {
 				pantallaResultado.mostrarVictoria(exp);
@@ -224,7 +221,7 @@ public class ControladorJuego {
 
 	public void onContinuarDesdeResultado() {
 		if (ultimaBatallaGanada) {
-			if (engine.getNivelActual() == 7) {
+			if (engine.getNivelActual() == NIVEL_FINAL) {
 				volverAlMenu();
 			} else {
 				restablecerSaludYManaParty();
@@ -243,10 +240,6 @@ public class ControladorJuego {
 		refrescarPantallaBatalla();
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────────
-	// ENCAPSULACIÓN Y MAPEO (POLIMÓRFICO)
-	// ─────────────────────────────────────────────────────────────────────────────
-
 	private void refrescarPantallaBatalla() {
 		MotorCombate motor = engine.getMotorCombate();
 
@@ -259,7 +252,8 @@ public class ControladorJuego {
 		List<String> nombresItems = new ArrayList<>();
 		Inventario inv = engine.getPartyPersonajes().getInventarioCompartido();
 		for (int i = 0; i < inv.getItems().size(); i++) {
-			nombresItems.add(inv.getItems().get(i).getNombre());
+			Item item = inv.getItems().get(i);
+			nombresItems.add(item.getNombre() + "  |  " + item.getDescripcion());
 		}
 
 		EstadoBatallaDTO estadoDTO = new EstadoBatallaDTO(aliados, enemigos, nombreTurno, engine.getNivelActual(),
@@ -295,17 +289,23 @@ public class ControladorJuego {
 			lista.add(new EntidadDTO(
 					e.getNombre(), e.getVidaActual(), e.getVidaMax(), 0, 0,
 					e.estaVivo(), e.tieneEfecto(TipoGeneral.ESCUDO), e.tieneEfecto(TipoGeneral.ATURDIDO),
-					e.getNivel(), 0, "ENEMIGO", e.getAtaque(), e.getDefensa(), e.getVelocidad()));
+					e.getNivel(), 0, "ENEMIGO", e.getAtaque(), e.getDefensa(), e.getVelocidad(),
+					"Ninguno", "Ninguno")); // Los enemigos no tienen slots de arma/accesorio visibles
 		}
 		return lista;
 	}
 
 	private EntidadDTO mapearSinglePersonajeADTO(Personaje p) {
+		String armaNom = p.getEquipamiento().getArma() != null ? p.getEquipamiento().getArma().getNombre() : "Ninguna";
+		String accNom = p.getEquipamiento().getAccesorio() != null ? p.getEquipamiento().getAccesorio().getNombre()
+				: "Ninguno";
+
 		return new EntidadDTO(
 				p.getNombre(), p.getVidaActual(), p.getVidaMax(), p.getManaActual(), p.getManaMax(),
 				p.estaVivo(), p.tieneEfecto(TipoGeneral.ESCUDO), p.tieneEfecto(TipoGeneral.ATURDIDO),
 				p.getNivel(), p.getExperiencia(), p.getClase().toString(),
-				p.calcularAtaqueBase(), p.getDefensa(), p.getVelocidad());
+				p.calcularAtaqueBase(), p.getDefensa(), p.getVelocidad(),
+				armaNom, accNom); // Pasamos las armas y accesorios mapeados polimórficamente
 	}
 
 	private int buscarIndiceEnemigoPorNombre(String nombre) {

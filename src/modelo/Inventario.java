@@ -43,11 +43,10 @@ public class Inventario implements Serializable {
 			return "Ítem no encontrado.";
 		}
 
-		// Invocación polimórfica: pasamos el objetivo y la referencia al inventario
 		String resultadoUso = item.usar(objetivo, this);
 
 		if (resultadoUso != null) {
-			eliminar(indice); // Se remueve el ítem consumido o equipado del inventario
+			eliminar(indice);
 			return resultadoUso;
 		} else {
 			return "Este ítem no se puede usar.";

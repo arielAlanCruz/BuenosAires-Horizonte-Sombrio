@@ -24,9 +24,14 @@ public class EntidadDTO {
     private final int defensaTotal;
     private final int velocidadTotal;
 
+    // NUEVO: Nombres de los equipamientos activos
+    private final String nombreArma;
+    private final String nombreAccesorio;
+
     public EntidadDTO(String nombre, int vidaActual, int vidaMax, int manaActual, int manaMax,
             boolean estaVivo, boolean tieneEscudo, boolean tieneAturdido,
-            int nivel, int experiencia, String clase, int ataqueTotal, int defensaTotal, int velocidadTotal) {
+            int nivel, int experiencia, String clase, int ataqueTotal, int defensaTotal, int velocidadTotal,
+            String nombreArma, String nombreAccesorio) {
         this.nombre = nombre;
         this.vidaActual = vidaActual;
         this.vidaMax = vidaMax;
@@ -41,6 +46,8 @@ public class EntidadDTO {
         this.ataqueTotal = ataqueTotal;
         this.defensaTotal = defensaTotal;
         this.velocidadTotal = velocidadTotal;
+        this.nombreArma = nombreArma;
+        this.nombreAccesorio = nombreAccesorio;
     }
 
     public String getNombre() {
@@ -97,5 +104,13 @@ public class EntidadDTO {
 
     public int getVelocidadTotal() {
         return velocidadTotal;
+    }
+
+    public String getNombreArma() {
+        return nombreArma;
+    }
+
+    public String getNombreAccesorio() {
+        return nombreAccesorio;
     }
 }

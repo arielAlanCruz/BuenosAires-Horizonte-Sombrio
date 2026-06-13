@@ -15,6 +15,7 @@ public abstract class Personaje extends Entidad {
 	private final TipoPersonaje clase;
 	private final Equipamiento equipamiento;
 	private final List<Habilidad> habilidades = new ArrayList<>();
+	private static final int NIVEL_EVOLUCION = 2;
 
 	protected Personaje(String nombre, TipoPersonaje clase, int vidaMax, int ataque, int defensa, int velocidad,
 			int manaMax) {
@@ -105,7 +106,7 @@ public abstract class Personaje extends Entidad {
 		curar(999999);
 		recuperarMana(999999);
 
-		if (nivel == 2) {
+		if (nivel == NIVEL_EVOLUCION) {
 			evolucionar();
 		}
 	}
@@ -114,6 +115,11 @@ public abstract class Personaje extends Entidad {
 
 	public int calcularAtaqueBase() {
 		return getAtaque() + equipamiento.getBonificacionAtaque();
+	}
+
+	@Override
+	public int getAtaqueEfectivo() {
+		return calcularAtaqueBase();
 	}
 
 	@Override

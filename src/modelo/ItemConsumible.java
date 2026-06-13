@@ -50,12 +50,10 @@ public class ItemConsumible extends Item {
 	@Override
 	public String usar(Personaje objetivo, Inventario inv) {
 		if (objetivo == null) {
-			System.out.println("DEBUG: Falló. Objetivo es nulo.");
 			return "No se puede usar en este objetivo.";
 		}
 
 		if (objetivo.estaVivo() == false) {
-			System.out.println("DEBUG: Falló. Objetivo muerto.");
 			return "No se puede usar en este objetivo.";
 		}
 
@@ -87,8 +85,6 @@ public class ItemConsumible extends Item {
 		if (vidaGanada == 0 && manaGanado == 0) {
 			resultado = resultado + " Sin efecto.";
 		}
-
-		System.out.println("DEBUG: Consumo exitoso -> " + resultado);
 
 		return resultado;
 	}

@@ -45,6 +45,15 @@ public abstract class Entidad implements Serializable {
 		return ataque;
 	}
 
+	/**
+	 * Retorna el ataque base de la entidad.
+	 * Puede ser sobreescrito polimórficamente por subclases para añadir
+	 * bonificaciones.
+	 */
+	public int getAtaqueEfectivo() {
+		return getAtaque();
+	}
+
 	public int getDefensa() {
 		return defensa;
 	}
@@ -98,8 +107,6 @@ public abstract class Entidad implements Serializable {
 		vidaActual = Math.min(vidaMax, vidaActual + cura);
 	}
 
-	// Nuevo método para revivir y restaurar completamente la salud (Omitiendo
-	// validaciones de muerte)
 	public void revivirYRestaurar() {
 		this.vidaActual = this.vidaMax;
 	}

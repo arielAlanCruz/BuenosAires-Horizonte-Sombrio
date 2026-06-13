@@ -37,7 +37,7 @@ public class PantallaBatalla extends JPanel {
 
 	private List<EntidadDTO> aliadosActuales;
 	private List<EntidadDTO> enemigosActuales;
-	private List<String> nombresItemsActuales; // Lista dinámica de ítems desde el DTO
+	private List<String> nombresItemsActuales;
 
 	public PantallaBatalla(ControladorJuego controlador) {
 		this.controlador = controlador;
@@ -175,31 +175,48 @@ public class PantallaBatalla extends JPanel {
 			return;
 		}
 
-		// Poblamos dinámicamente las opciones del JOptionPane desde la lista del DTO
-		String[] opcionesItems = nombresItemsActuales.toArray(new String[0]);
-		int idxItem = JOptionPane.showOptionDialog(this, "Elegí un ítem para usar (Pociones o Armas):",
-				"Inventario Compartido",
-				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opcionesItems, opcionesItems[0]);
+		// 1. Instanciamos un JList con las descripciones dinámicas
+		JList<String> listaItems = new JList<>(nombresItemsActuales.toArray(new String[0]));
+		listaItems.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listaItems.setVisibleRowCount(5); // Altura de fila máxima sin barra
 
-		if (idxItem < 0)
-			return;
+		// 2. Envolvemos la lista en un ScrollPane vertical
+		JScrollPane scrollPane = new JScrollPane(listaItems);
+		scrollPane.setPreferredSize(new Dimension(380, 120));
 
-		List<EntidadDTO> vivos = obtenerVivos(aliadosActuales);
-		if (vivos.isEmpty()) {
-			mostrarMensajeLocal("No hay personajes vivos para utilizar el ítem.");
-			return;
-		}
+		// 3. Mostramos la lista vertical en un diálogo de confirmación
+		int opcion = JOptionPane.showConfirmDialog(
+				this,
+				scrollPane,
+				"Inventario Compartido (Pociones y Equipamiento)",
+				JOptionPane.OK_CANCEL_OPTION,
+				JOptionPane.PLAIN_MESSAGE);
 
-		String[] opcionesObjetivo = new String[vivos.size()];
-		for (int i = 0; i < vivos.size(); i++) {
-			opcionesObjetivo[i] = vivos.get(i).getNombre() + " (HP " + vivos.get(i).getVidaActual() + ")";
-		}
+		if (opcion == JOptionPane.OK_OPTION) {
+			int idxItem = listaItems.getSelectedIndex();
+			if (idxItem < 0) {
+				mostrarMensajeLocal("Seleccioná un ítem de la lista para usar.");
+				return;
+			}
 
-		int idxObj = JOptionPane.showOptionDialog(this, "Elegí el objetivo del ítem:", "Objetivo",
-				JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opcionesObjetivo, opcionesObjetivo[0]);
+			List<EntidadDTO> vivos = obtenerVivos(aliadosActuales);
+			if (vivos.isEmpty()) {
+				mostrarMensajeLocal("No hay personajes vivos para utilizar el ítem.");
+				return;
+			}
 
-		if (idxObj >= 0) {
-			controlador.procesarItem(idxItem, vivos.get(idxObj).getNombre());
+			String[] opcionesObjetivo = new String[vivos.size()];
+			for (int i = 0; i < vivos.size(); i++) {
+				opcionesObjetivo[i] = vivos.get(i).getNombre() + " (HP " + vivos.get(i).getVidaActual() + ")";
+			}
+
+			int idxObj = JOptionPane.showOptionDialog(this, "Elegí el objetivo del ítem:", "Objetivo",
+					JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opcionesObjetivo,
+					opcionesObjetivo[0]);
+
+			if (idxObj >= 0) {
+				controlador.procesarItem(idxItem, vivos.get(idxObj).getNombre());
+			}
 		}
 	}
 
@@ -234,7 +251,7 @@ public class PantallaBatalla extends JPanel {
 	public void actualizarBarras(EstadoBatallaDTO estado) {
 		this.aliadosActuales = estado.getAliados();
 		this.enemigosActuales = estado.getEnemigos();
-		this.nombresItemsActuales = estado.getNombresItemsInventario(); // Copia la lista de ítems dinámicos
+		this.nombresItemsActuales = estado.getNombresItemsInventario();
 
 		panelEscenario.actualizarEscenario(estado.getAliados(), estado.getEnemigos(), estado.getNivelActual());
 
