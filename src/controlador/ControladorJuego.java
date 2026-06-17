@@ -48,11 +48,16 @@ public class ControladorJuego {
 		this.pantallaFogata = fogata;
 	}
 
+	// =========================================================
+	// ============== FLUJO PRINCIPAL DEL JUEGO ================
+	// =========================================================
+
 	public void iniciarNuevaPartida() {
 		engine.iniciarNuevaPartida();
 		engine.iniciarNuevoNivel();
 		ventana.mostrarPantalla("BATALLA");
-		refrescarPantallaBatalla();
+		refrescarPantallaBatalla();// Para mostrar el estado inicial de la batalla
+									// inmediatamente al iniciar una nueva partida
 	}
 
 	public void volverAlMenu() {
@@ -82,6 +87,10 @@ public class ControladorJuego {
 			mostrarMensaje("No se pudo guardar la partida: " + ex.getMessage());
 		}
 	}
+
+	// =========================================================
+	// =============== ACCIONES DEL JUGADOR ====================
+	// =========================================================
 
 	public void procesarAtaque(String nombreObjetivo) {
 		int indice = buscarIndiceEnemigoPorNombre(nombreObjetivo);
@@ -139,6 +148,10 @@ public class ControladorJuego {
 		}
 	}
 
+	// =========================================================
+	// =============== CONTROL DE VISTAS UI ====================
+	// =========================================================
+
 	public void procesarVerEstado() {
 		MotorCombate motor = engine.getMotorCombate();
 		Entidad actual = motor.getEntidadEnTurnoActual();
@@ -155,6 +168,9 @@ public class ControladorJuego {
 		ventana.mostrarPantalla("BATALLA");
 		refrescarPantallaBatalla();
 	}
+	// =========================================================
+	// =============== FLUJO DE TURNOS / BATALLA ==============
+	// =========================================================
 
 	public void ejecutarTurnoEnemigoAutomatico() {
 		MotorCombate motor = engine.getMotorCombate();
@@ -200,6 +216,10 @@ public class ControladorJuego {
 		pantallaBatalla.iniciarTemporizadorTransitionFinBatalla();
 	}
 
+	// =========================================================
+	// =============== RESULTADOS Y PROGRESIÓN ================
+	// =========================================================
+
 	public void cambiarAPantallaResultadoFinal() {
 		MotorCombate motor = engine.getMotorCombate();
 		if (ultimaBatallaGanada) {
@@ -239,15 +259,23 @@ public class ControladorJuego {
 		ventana.mostrarPantalla("BATALLA");
 		refrescarPantallaBatalla();
 	}
+	// =========================================================
+	// ================== ACTUALIZACIÓN UI =====================
+	// =========================================================
 
 	private void refrescarPantallaBatalla() {
 		MotorCombate motor = engine.getMotorCombate();
-
+		// convertir personajes y enemigos del modelo a DTOs para la vista
 		List<EntidadDTO> aliados = mapearListaPersonajes(engine.getPartyPersonajes().getMiembros());
 		List<EntidadDTO> enemigos = mapearListaEnemigos(motor.getPartyEnemigos().getEnemigos());
 
 		Entidad actual = motor.getEntidadEnTurnoActual();
-		String nombreTurno = actual != null ? actual.getNombre() : "";
+		// String nombreTurno = actual != null ? actual.getNombre() : "";
+		if (actual == null) {
+			mostrarMensaje("Error: No hay entidad en turno actual.");
+			return;
+		}
+		String nombreTurno = actual.getNombre();
 
 		List<String> nombresItems = new ArrayList<>();
 		Inventario inv = engine.getPartyPersonajes().getInventarioCompartido();
@@ -273,6 +301,9 @@ public class ControladorJuego {
 		pantallaBatalla.mostrarResultadoTurno(r);
 		refrescarPantallaBatalla();
 	}
+	// =========================================================
+	// ===================== MAPEOS DTO ========================
+	// =========================================================
 
 	private List<EntidadDTO> mapearListaPersonajes(List<Personaje> personajes) {
 		List<EntidadDTO> lista = new ArrayList<>();
@@ -296,17 +327,32 @@ public class ControladorJuego {
 	}
 
 	private EntidadDTO mapearSinglePersonajeADTO(Personaje p) {
-		String armaNom = p.getEquipamiento().getArma() != null ? p.getEquipamiento().getArma().getNombre() : "Ninguna";
-		String accNom = p.getEquipamiento().getAccesorio() != null ? p.getEquipamiento().getAccesorio().getNombre()
-				: "Ninguno";
+		String armaNom = "Ninguna";
+		String accNom = "Ninguno";
 
-		return new EntidadDTO(
+		// Validamos el equipamiento de forma clara
+		if (p.getEquipamiento() != null) {
+			if (p.getEquipamiento().getArma() != null) {
+				armaNom = p.getEquipamiento().getArma().getNombre();
+			}
+			if (p.getEquipamiento().getAccesorio() != null) {
+				accNom = p.getEquipamiento().getAccesorio().getNombre();
+			}
+		}
+
+		// Retornamos el DTO con los parámetros ordenados visualmente
+		EntidadDTO Heroe_dto = new EntidadDTO(
 				p.getNombre(), p.getVidaActual(), p.getVidaMax(), p.getManaActual(), p.getManaMax(),
 				p.estaVivo(), p.tieneEfecto(TipoGeneral.ESCUDO), p.tieneEfecto(TipoGeneral.ATURDIDO),
-				p.getNivel(), p.getExperiencia(), p.getClase().toString(),
-				p.calcularAtaqueBase(), p.getDefensa(), p.getVelocidad(),
-				armaNom, accNom); // Pasamos las armas y accesorios mapeados polimórficamente
+				p.getNivel(), p.getExperiencia(), p.getClase().toString(), p.calcularAtaqueBase(),
+				p.getDefensa(), p.getVelocidad(), armaNom, accNom);
+
+		return Heroe_dto;
 	}
+
+	// =========================================================
+	// ===================== BÚSQUEDAS =========================
+	// =========================================================
 
 	private int buscarIndiceEnemigoPorNombre(String nombre) {
 		List<Enemigo> vivos = engine.getMotorCombate().getPartyEnemigos().getVivos();
@@ -327,6 +373,10 @@ public class ControladorJuego {
 		}
 		return -1;
 	}
+
+	// =========================================================
+	// ==================== UTILIDADES =========================
+	// =========================================================
 
 	private void restablecerSaludYManaParty() {
 		if (engine.getPartyPersonajes() != null) {

@@ -22,7 +22,10 @@ public class GameEngine {
     }
 
     public static synchronized GameEngine getInstance() {
-        if (instancia == null) instancia = new GameEngine();
+        if (instancia == null) {
+            instancia = new GameEngine();
+
+        }
         return instancia;
     }
 
@@ -58,7 +61,8 @@ public class GameEngine {
     // ─────────────────────────────
 
     public void guardarPartida(String rutaArchivo) throws IOException {
-        if (partyPersonajes == null) throw new IllegalStateException("No hay partida iniciada.");
+        if (partyPersonajes == null)
+            throw new IllegalStateException("No hay partida iniciada.");
         EstadoPartida estado = new EstadoPartida(partyPersonajes, nivelActual);
         estado.guardar(rutaArchivo);
     }

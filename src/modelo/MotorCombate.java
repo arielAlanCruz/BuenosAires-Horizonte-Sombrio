@@ -13,6 +13,12 @@ public class MotorCombate {
 	private int indiceTurno = 0;
 	private TipoGeneral estadoBatalla = TipoGeneral.EN_CURSO;
 
+	// =========================================================
+	// ===================== INICIO BATALLA ====================
+	// =========================================================
+	/**
+	 * Construye el orden de turnos y prepara la batalla.
+	 */
 	public void iniciarBatalla(PartyPersonajes party, PartyEnemigos enemigos) {
 		this.partyPersonajes = party;
 		this.partyEnemigos = enemigos;
@@ -21,9 +27,12 @@ public class MotorCombate {
 		ordenTurnos.clear();
 		indiceTurno = 0;
 
+		// aqui hacemos la lógica de iniciativa para determinar el orden de los turnos,
+		// mezclando mezclando personajes y enemigos según su velocidad
 		List<Personaje> heroes = new ArrayList<>(partyPersonajes.getMiembros());
 		List<Enemigo> listaEnemigos = new ArrayList<>(partyEnemigos.getEnemigos());
 
+		// Ordenamos ambos grupos por velocidad alta primero, luego baja -> b,a
 		heroes.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
 		listaEnemigos.sort((a, b) -> Integer.compare(b.getVelocidad(), a.getVelocidad()));
 
@@ -31,19 +40,22 @@ public class MotorCombate {
 		if (!listaEnemigos.isEmpty() && !heroes.isEmpty()) {
 			heroesGananIniciativa = heroes.get(0).getVelocidad() >= listaEnemigos.get(0).getVelocidad();
 		}
-
+		// Dividimos cada grupo en vanguardia (los 2 más rápidos) y retaguardia (el
+		// resto)
 		List<Entidad> vanguardiaHeroes = extraerSubListaSegura(heroes, 0, 2);
 		List<Entidad> retaguardiaHeroes = extraerSubListaSegura(heroes, 2, heroes.size());
 
 		List<Entidad> vanguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 0, 2);
 		List<Entidad> retaguardiaEnemigos = extraerSubListaSegura(listaEnemigos, 2, listaEnemigos.size());
 
+		// en la batala, la vanguardia ataca primero, luego la retaguardia,
+		// mezclando héroes y enemigos según quién tenga la iniciativa
 		if (heroesGananIniciativa) {
 			ordenTurnos.addAll(vanguardiaHeroes);
 			ordenTurnos.addAll(vanguardiaEnemigos);
 			ordenTurnos.addAll(retaguardiaHeroes);
 			ordenTurnos.addAll(retaguardiaEnemigos);
-		} else {
+		} else {// Si los enemigos ganan la iniciativa, empiezan atacando ellos
 			ordenTurnos.addAll(vanguardiaEnemigos);
 			ordenTurnos.addAll(vanguardiaHeroes);
 			ordenTurnos.addAll(retaguardiaEnemigos);
@@ -53,6 +65,12 @@ public class MotorCombate {
 		avanzarHastaEntidadViva();
 	}
 
+	// =========================================================
+	// ===================== UTILIDAD INTERNA ==================
+	// =========================================================
+
+	// pasar una lista de cualquier cosa que sea Entidad o herede de Entidad y
+	// extraer una sublista segura sin lanzar excepciones por índices fuera de rango
 	private List<Entidad> extraerSubListaSegura(List<? extends Entidad> lista, int desde, int hasta) {
 		List<Entidad> subLista = new ArrayList<>();
 		for (int i = desde; i < hasta && i < lista.size(); i++) {
@@ -60,6 +78,10 @@ public class MotorCombate {
 		}
 		return subLista;
 	}
+
+	// =========================================================
+	// ===================== GETTERS BASE ======================
+	// =========================================================
 
 	public TipoGeneral getEstadoBatalla() {
 		return estadoBatalla;
@@ -80,6 +102,13 @@ public class MotorCombate {
 		return partyEnemigos;
 	}
 
+	// =========================================================
+	// ===================== TURNOS JUGADOR ====================
+	// =========================================================
+	/**
+	 * Procesa el turno del jugador, traduciendo la acción y el objetivo a índices
+	 * lógicos del modelo y delegando en los métodos internos.
+	 */
 	public ResultadoTurno procesarTurnoJugador(TipoGeneral accion, int indiceObjetivo) {
 		if (estadoBatalla != TipoGeneral.EN_CURSO) {
 			return new ResultadoTurno(accion, "", "", 0, 0, null, false, estadoBatalla, "La batalla ya terminó.", 0);
@@ -93,6 +122,10 @@ public class MotorCombate {
 
 		return procesarTurnoDeEntidad(actual, accion, -1, indiceObjetivo);
 	}
+
+	// =========================================================
+	// ===================== TURNOS ENEMIGO ====================
+	// =========================================================
 
 	public ResultadoTurno procesarTurnoEnemigo() {
 		if (estadoBatalla != TipoGeneral.EN_CURSO) {
@@ -110,6 +143,10 @@ public class MotorCombate {
 		return procesarTurnoDeEntidad(enemigo, accion, -1, -1);
 	}
 
+	// =========================================================
+	// ============== MOTOR CENTRAL DE ACCIONES ================
+	// =========================================================
+
 	private ResultadoTurno procesarTurnoDeEntidad(Entidad entidad, TipoGeneral accion, int indiceHabilidad,
 			int indiceObjetivo) {
 		if (entidad == null) {
@@ -118,6 +155,7 @@ public class MotorCombate {
 
 		entidad.limpiarEscudoAlInicioDeTurno();
 
+		// -------------------- inicio turno --------------------
 		if (entidad.consumirAturdidoSiExiste()) {
 			ResultadoTurno r = new ResultadoTurno(accion, entidad.getNombre(), "", 0, 0, TipoGeneral.ATURDIDO, true,
 					estadoBatalla, entidad.getNombre() + " está ATURDIDO y pierde el turno.", 0);
@@ -125,6 +163,7 @@ public class MotorCombate {
 			return r;
 		}
 
+		// -------------------- resolución --------------------
 		ResultadoTurno resultado;
 		switch (accion) {
 			case ATACAR:
@@ -145,24 +184,22 @@ public class MotorCombate {
 						"Acción no soportada.", 0);
 		}
 
+		// -------------------- fin turno --------------------
 		this.estadoBatalla = verificarFinBatalla();
 
 		if (this.estadoBatalla == TipoGeneral.EN_CURSO) {
 			avanzarTurno();
 		}
 
-		return new ResultadoTurno(
-				resultado.getAccion(),
-				resultado.getNombreAtacante(),
-				resultado.getNombreObjetivo(),
-				resultado.getDanio(),
-				resultado.getCuracion(),
-				resultado.getEfectoAplicado(),
-				resultado.isTurnoSalteado(),
-				this.estadoBatalla,
-				resultado.getMensaje(),
+		return new ResultadoTurno(resultado.getAccion(), resultado.getNombreAtacante(), resultado.getNombreObjetivo(),
+				resultado.getDanio(), resultado.getCuracion(), resultado.getEfectoAplicado(),
+				resultado.isTurnoSalteado(), this.estadoBatalla, resultado.getMensaje(),
 				resultado.getExperienciaGanada());
 	}
+
+	// =========================================================
+	// ===================== ACCIONES BASE =====================
+	// =========================================================
 
 	private ResultadoTurno resolverAtaque(Entidad atacante, int indiceObjetivo) {
 		Entidad objetivo = seleccionarObjetivoParaAtaque(atacante, indiceObjetivo);
@@ -227,6 +264,10 @@ public class MotorCombate {
 		return h.ejecutar(origen, objetivo);
 	}
 
+	// =========================================================
+	// ===================== SELECCIÓN OBJETIVOS ==============
+	// =========================================================
+
 	private Entidad seleccionarObjetivoParaAtaque(Entidad atacante, int indiceObjetivo) {
 		if (atacante instanceof Personaje) {
 			List<Enemigo> vivos = partyEnemigos.getVivos();
@@ -290,6 +331,10 @@ public class MotorCombate {
 		return Math.max(1, ataqueTotal - defensaFinal);
 	}
 
+	// =========================================================
+	// ===================== CONTROL DE TURNOS ================
+	// =========================================================
+
 	private void avanzarTurno() {
 		if (ordenTurnos.isEmpty()) {
 			return;
@@ -298,6 +343,8 @@ public class MotorCombate {
 		avanzarHastaEntidadViva();
 	}
 
+	// Avanza el índice de turno hasta encontrar una entidad viva o agotar las
+	// opciones
 	private void avanzarHastaEntidadViva() {
 		if (ordenTurnos.isEmpty()) {
 			return;
@@ -313,6 +360,10 @@ public class MotorCombate {
 		}
 	}
 
+	// =========================================================
+	// ===================== ESTADO BATALLA ===================
+	// =========================================================
+
 	private TipoGeneral verificarFinBatalla() {
 		if (partyPersonajes.todosDerrotados()) {
 			return TipoGeneral.DERROTA;
@@ -323,6 +374,10 @@ public class MotorCombate {
 		return TipoGeneral.EN_CURSO;
 	}
 
+	// =========================================================
+	// ===================== CONSULTAS UI =====================
+	// =========================================================
+
 	public boolean esTurnoDePersonaje() {
 		return getEntidadEnTurnoActual() instanceof Personaje;
 	}
@@ -330,6 +385,10 @@ public class MotorCombate {
 	public boolean esTurnoDeEnemigo() {
 		return getEntidadEnTurnoActual() instanceof Enemigo;
 	}
+
+	// =========================================================
+	// ===================== API JUGADOR ======================
+	// =========================================================
 
 	public ResultadoTurno procesarHabilidadJugador(int indiceHabilidad, int indiceObjetivo) {
 		Entidad actual = getEntidadEnTurnoActual();

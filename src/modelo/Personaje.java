@@ -63,23 +63,28 @@ public abstract class Personaje extends Entidad {
 
 	public boolean tieneMana(int cantidad) {
 		return manaActual >= Math.max(0, cantidad);
+		// si manaActual es 50 y cantidad es -10, devuelve true
+		// (no se penaliza por habilidades que recuperan mana)
 	}
 
 	public void usarMana(int cantidad) {
 		int c = Math.max(0, cantidad);
 		manaActual = Math.max(0, manaActual - c);
-	}
+	}// Si manaActual es 50 y cantidad es -10, no se resta nada
+		// (no se penaliza por habilidades que recuperan mana)
 
 	public void recuperarMana(int cantidad) {
 		int c = Math.max(0, cantidad);
 		manaActual = Math.min(manaMax, manaActual + c);
-	}
+	}// Si manaActual es 50, manaMax es 100 y cantidad es -10, no se suma nada
+		// (no se penaliza por habilidades que consumen mana)
 
 	protected void setManaMax(int nuevoMax) {
 		this.manaMax = Math.max(0, nuevoMax);
 		if (manaActual > manaMax)
 			manaActual = manaMax;
-	}
+	}// Si el nuevo manaMax es menor que el manaActual,
+		// se ajusta manaActual al nuevo máximo
 
 	public void ganarExperiencia(int cantidad) {
 		if (cantidad <= 0)
