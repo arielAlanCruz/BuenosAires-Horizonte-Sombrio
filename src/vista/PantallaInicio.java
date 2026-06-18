@@ -1,9 +1,8 @@
 package vista;
 
 import controlador.ControladorJuego;
-
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
 
 /**
  * Pantalla inicial: nueva partida / cargar partida.
@@ -11,31 +10,47 @@ import java.awt.*;
 public class PantallaInicio extends JPanel {
 
     private final ControladorJuego controlador;
+    private Image imagenFondo;
 
     public PantallaInicio(ControladorJuego controlador) {
         this.controlador = controlador;
 
         setLayout(new BorderLayout());
 
-        JLabel titulo = new JLabel("Buenos Aires: Horizonte Sombrío", SwingConstants.CENTER);
-        titulo.setFont(new Font("Arial", Font.BOLD, 26));
+        ImageIcon icon = new ImageIcon(getClass().getResource("/img/Imagen-Inicio.png"));
+        imagenFondo = icon.getImage();
 
-        JPanel centro = new JPanel();
-        centro.setLayout(new GridLayout(3, 1, 10, 10));
+        JLabel titulo = EstiloUI.labelTitulo("Buenos Aires: Horizonte Sombrío");
 
-        JButton btnNueva = new JButton("Nueva Partida");
-        JButton btnCargar = new JButton("Cargar Partida");
-        JButton btnSalir = new JButton("Salir");
+        JButton btnNueva = EstiloUI.botonPrimario("Nueva Partida");
+        JButton btnCargar = EstiloUI.botonSecundario("Cargar Partida");
+        JButton btnSalir = EstiloUI.botonSecundario("Salir");
 
         btnNueva.addActionListener(e -> controlador.iniciarNuevaPartida());
         btnCargar.addActionListener(e -> controlador.cargarPartida());
         btnSalir.addActionListener(e -> System.exit(0));
 
-        centro.add(btnNueva);
-        centro.add(btnCargar);
-        centro.add(btnSalir);
+        JPanel panelBotones = new JPanel(new GridLayout(3, 1, 0, 10));
+        panelBotones.setOpaque(false);
+        panelBotones.add(btnNueva);
+        panelBotones.add(btnCargar);
+        panelBotones.add(btnSalir);
 
-        add(titulo, BorderLayout.NORTH);
-        add(centro, BorderLayout.CENTER);
+        JPanel panelCentro = new JPanel(new GridLayout(2, 1, 0, 20));
+        panelCentro.setOpaque(false);
+        panelCentro.add(titulo);
+        panelCentro.add(panelBotones);
+
+        JPanel panelMedio = new JPanel(new GridBagLayout());
+        panelMedio.setOpaque(false);
+        panelMedio.add(panelCentro);
+
+        add(panelMedio, BorderLayout.CENTER);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.drawImage(imagenFondo, 0, 0, getWidth(), getHeight(), this);
     }
 }

@@ -1,14 +1,15 @@
 package vista;
 
 import controlador.ControladorJuego;
-import modelo.GameEngine;
-import modelo.ItemConsumible;
-import modelo.ItemEquipable;
-
-import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
+import javax.swing.*;
 
+/**
+ * Fogata (MVP):
+ * - Entrega 2-3 items fijos al inventario compartido.
+ * - Luego continuar al siguiente nivel.
+ */
 public class PantallaFogata extends JPanel {
 
     private final ControladorJuego controlador;
@@ -18,36 +19,48 @@ public class PantallaFogata extends JPanel {
     public PantallaFogata(ControladorJuego controlador) {
         this.controlador = controlador;
 
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(0, 0));
 
+        // Cargar imagen de fondo
         URL url = getClass().getResource("/img/Fogata.png");
         if (url != null) {
             imgFondo = new ImageIcon(url).getImage();
         }
 
-        JLabel titulo = new JLabel("FOGATA", SwingConstants.CENTER);
-        titulo.setFont(new Font("Arial", Font.BOLD, 32));
-        titulo.setForeground(Color.WHITE);
+        //Titulo en la parte superior
+        JLabel titulo = EstiloUI.labelTitulo("Fogata");
+        titulo.setBorder(BorderFactory.createEmptyBorder(18, 0, 0, 0));
+
+        //Info + Boton sobre overlay oscuro
+        //Panel semitransparente para mejorar la legibilidad del texto sobre la imagen
+        JPanel panelSur = new JPanel(new BorderLayout(0, 8)){
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.setColor(new Color(0, 0, 0, 180)); //Negro semitransparente
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+
+        panelSur.setOpaque(false);
+        panelSur.setBorder(BorderFactory.createEmptyBorder(14, 30, 14, 30));
 
         lblInfo = new JLabel(" ", SwingConstants.CENTER);
-        lblInfo.setFont(new Font("Arial", Font.BOLD, 18));
-        lblInfo.setForeground(Color.WHITE);
+        lblInfo.setFont(EstiloUI.FUENTE_TEXTO);
+        lblInfo.setForeground(EstiloUI.COLOR_TEXTO_PRIMARIO);
 
-        JButton btnContinuar = new JButton("Continuar");
-        btnContinuar.setFont(new Font("Arial", Font.BOLD, 16));
+        JButton btnContinuar = EstiloUI.botonPrimario("Continuar");
         btnContinuar.addActionListener(e -> controlador.onContinuarDesdeFogata());
 
-        JPanel pnlCentro = new JPanel(new BorderLayout());
-        pnlCentro.setOpaque(false);
-        pnlCentro.add(lblInfo, BorderLayout.CENTER);
+        JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        panelBoton.setOpaque(false);
+        panelBoton.add(btnContinuar);
 
-        JPanel pnlSur = new JPanel();
-        pnlSur.setOpaque(false);
-        pnlSur.add(btnContinuar);
+        panelSur.add(lblInfo, BorderLayout.CENTER);
+        panelSur.add(panelBoton, BorderLayout.SOUTH);
 
         add(titulo, BorderLayout.NORTH);
-        add(pnlCentro, BorderLayout.CENTER);
-        add(pnlSur, BorderLayout.SOUTH);
+        add(panelSur, BorderLayout.SOUTH);
     }
 
     @Override
@@ -56,27 +69,16 @@ public class PantallaFogata extends JPanel {
         if (imgFondo != null) {
             g.drawImage(imgFondo, 0, 0, getWidth(), getHeight(), this);
         } else {
-            g.setColor(Color.DARK_GRAY);
+            g.setColor(EstiloUI.COLOR_FONDO);
             g.fillRect(0, 0, getWidth(), getHeight());
         }
     }
 
-    public void entregarItemsFijos() {
-        GameEngine engine = GameEngine.getInstance();
-        if (engine.getPartyPersonajes() == null)
-            return;
-
-        // Consumibles
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.tortaFrita());
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(ItemConsumible.asado());
-
-        // ENTREGAS DE ARMAS: Agregamos equipamiento interactivo polimórfico al
-        // inventario compartido
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(
-                new ItemEquipable("Cuchillo de Plata", "Arma legendaria (+8 ATQ).", ItemEquipable.SLOT_ARMA, 8, 0, 0));
-        engine.getPartyPersonajes().getInventarioCompartido().agregar(new ItemEquipable("Poncho de Alpaca",
-                "Accesorio protector (+4 DEF, +2 VEL).", ItemEquipable.SLOT_ACCESORIO, 0, 4, 2));
-
-        lblInfo.setText("Suministros recogidos: Torta Frita, Asado de Tira, Cuchillo de Plata y Poncho de Alpaca.");
+    /**
+     * Llamado por el controlador para mostrar los suministros entregados.
+     * La vista solo actualiza el label con el texto recibido.
+     */
+    public void mostrarSuministros(String descripcion) {
+        lblInfo.setText("Suministros recogidos: " + descripcion);
     }
 }

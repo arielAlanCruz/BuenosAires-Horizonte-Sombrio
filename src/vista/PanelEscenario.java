@@ -1,20 +1,24 @@
 package vista;
 
 import dto.EntidadDTO;
-
-import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import javax.imageio.ImageIO;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import javax.imageio.ImageIO;
+import javax.swing.*;
 
 public class PanelEscenario extends JPanel {
 
 	private Image imgFondo;
-	private java.util.List<EntidadDTO> partyActual;
-	private java.util.List<EntidadDTO> enemigosActual;
+
+	// Antes esto era PartyPersonajes/PartyEnemigos (modelo). La vista no debe
+	// tener una referencia al modelo real: solo recibe los EntidadDTO que el
+	// controlador ya armó en refrescarPantallaBatalla().
+	private List<EntidadDTO> aliadosActual;
+	private List<EntidadDTO> enemigosActual;
 
 	private String nombreAtacando = null;
 	private String mensajeCombate = "¡Comienza el combate!";
@@ -26,19 +30,20 @@ public class PanelEscenario extends JPanel {
 		setBackground(Color.DARK_GRAY);
 	}
 
-	public void actualizarEscenario(java.util.List<EntidadDTO> party, java.util.List<EntidadDTO> enemigos,
-			int nivelActual) {
-		this.partyActual = party;
+	public void actualizarEscenario(List<EntidadDTO> aliados, List<EntidadDTO> enemigos, int nivelActual) {
+		this.aliadosActual = aliados;
 		this.enemigosActual = enemigos;
 
-		String rutaFondo = "/img/Nivel1.png";
+		// Selección estricta del fondo en base a la secuencia oficial de combates (1 a
+		// 7)
+		String rutaFondo = "/img/Nivel1.png"; // Ombú seco por defecto (Zona 1: Combates 1 y 2)
 
 		if (nivelActual == 3 || nivelActual == 4) {
-			rutaFondo = "/img/Nivel2.png";
+			rutaFondo = "/img/Nivel2.png"; // Villa Miseria (Zona 2: Combates 3 y 4)
 		} else if (nivelActual == 5 || nivelActual == 6) {
-			rutaFondo = "/img/Nivel3.png";
+			rutaFondo = "/img/Nivel3.png"; // Obelisco lluvioso (Zona 3: Combates 5 y 6)
 		} else if (nivelActual >= 7) {
-			rutaFondo = "/img/NivelFinal.png";
+			rutaFondo = "/img/NivelFinal.png"; // Casa Rosada (Zona Final: Combate 7)
 		}
 
 		this.imgFondo = cargarRecurso(rutaFondo);
@@ -78,29 +83,33 @@ public class PanelEscenario extends JPanel {
 
 		int size = Math.max(50, Math.min(110, (int) (getHeight() * 0.22)));
 
-		if (partyActual != null) {
-			double[] xRatios = { 0.08, 0.15, 0.08, 0.15 };
-			double[] yRatios = { 0.40, 0.52, 0.64, 0.76 };
-			for (int i = 0; i < partyActual.size(); i++) {
-				EntidadDTO p = partyActual.get(i);
-				if (p.isEstaVivo() && i < yRatios.length) {
-					int x = (int) (getWidth() * xRatios[i]);
-					int y = (int) (getHeight() * yRatios[i]) - (size / 2);
+		if (aliadosActual != null) {
+			double[] xRatios = { 0.10, 0.15, 0.20, 0.25 };
+			double[] yRatios = { 0.72, 0.78, 0.72, 0.78 };
+			int index = 0;
+			for (int i = 0; i < aliadosActual.size(); i++) {
+				EntidadDTO p = aliadosActual.get(i);
+				if (p.isEstaVivo() && index < yRatios.length) {
+					int x = (int) (getWidth() * xRatios[index]);
+					int y = (int) (getHeight() * yRatios[index]) - (size / 2);
 					dibujarEntidad(g2d, p, x, y, size, true);
 				}
+				index++;
 			}
 		}
 
 		if (enemigosActual != null) {
-			double[] xRatios = { 0.82, 0.75, 0.82, 0.75 };
-			double[] yRatios = { 0.40, 0.52, 0.64, 0.76 };
+			double[] xRatios = { 0.90, 0.85, 0.80, 0.75 };
+			double[] yRatios = { 0.78, 0.72, 0.78, 0.72 };
+			int index = 0;
 			for (int i = 0; i < enemigosActual.size(); i++) {
 				EntidadDTO e = enemigosActual.get(i);
-				if (e.isEstaVivo() && i < yRatios.length) {
-					int x = (int) (getWidth() * xRatios[i]);
-					int y = (int) (getHeight() * yRatios[i]) - (size / 2);
+				if (e.isEstaVivo() && index < yRatios.length) {
+					int x = (int) (getWidth() * xRatios[index]);
+					int y = (int) (getHeight() * yRatios[index]) - (size / 2);
 					dibujarEntidad(g2d, e, x, y, size, false);
 				}
+				index++;
 			}
 		}
 
@@ -120,7 +129,7 @@ public class PanelEscenario extends JPanel {
 
 		int xActual = x;
 		if (entidad.getNombre().equals(nombreAtacando)) {
-			int paso = (int) (getWidth() * 0.04);
+			int paso = (int) (getWidth() * 0.06);
 			xActual += esAliado ? paso : -paso;
 		}
 

@@ -2,97 +2,172 @@ package vista;
 
 import controlador.ControladorJuego;
 import dto.EntidadDTO;
-
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 
+/**
+ * Pantalla de estado del personaje en turno.
+ * Muestra stats, mana y efectos activos. Solo renderiza, no toca el modelo.
+ */
 public class PantallaEstado extends JPanel {
 
     private final ControladorJuego controlador;
-    private final JTextArea area;
-    private final JButton btnVolver;
+    private final JPanel panelDatos;
 
     public PantallaEstado(ControladorJuego controlador) {
         this.controlador = controlador;
-        setLayout(new BorderLayout(10, 10));
 
-        JLabel titulo = new JLabel("ESTADO DEL PERSONAJE", SwingConstants.CENTER);
-        titulo.setFont(new Font("Arial", Font.BOLD, 20));
+        setLayout(new BorderLayout(0, 0));
+        setBackground(EstiloUI.COLOR_FONDO);
 
-        area = new JTextArea();
-        area.setEditable(false);
-        area.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        // ── NORTE: título ────────────────────────────────────────────────────────
+        JPanel norte = new JPanel(new BorderLayout());
+        norte.setBackground(EstiloUI.COLOR_PANEL);
+        norte.setBorder(new MatteBorder(0, 0, 2, 0, EstiloUI.COLOR_DORADO_OSCURO));
+        norte.add(EstiloUI.labelTitulo("ESTADO DEL PERSONAJE"), BorderLayout.CENTER);
+        add(norte, BorderLayout.NORTH);
 
-        btnVolver = new JButton("Volver");
+        // ── CENTRO: filas de datos ───────────────────────────────────────────────
+        panelDatos = new JPanel();
+        panelDatos.setLayout(new BoxLayout(panelDatos, BoxLayout.Y_AXIS));
+        panelDatos.setBackground(EstiloUI.COLOR_FONDO);
+        panelDatos.setBorder(new EmptyBorder(24, 80, 24, 80));
+
+        JScrollPane scroll = new JScrollPane(panelDatos);
+        scroll.setBorder(null);
+        scroll.setBackground(EstiloUI.COLOR_FONDO);
+        scroll.getViewport().setBackground(EstiloUI.COLOR_FONDO);
+        add(scroll, BorderLayout.CENTER);
+
+        // ── SUR: botón volver ────────────────────────────────────────────────────
+        JPanel sur = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        sur.setBackground(EstiloUI.COLOR_PANEL);
+        sur.setBorder(new MatteBorder(2, 0, 0, 0, EstiloUI.COLOR_DORADO_OSCURO));
+
+        JButton btnVolver = EstiloUI.botonSecundario("← Volver");
         btnVolver.addActionListener(e -> controlador.onVolverDesdeEstado());
+        sur.add(btnVolver);
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        panelBotones.add(btnVolver);
-
-        add(titulo, BorderLayout.NORTH);
-        add(new JScrollPane(area), BorderLayout.CENTER);
-        add(panelBotones, BorderLayout.SOUTH);
+        add(sur, BorderLayout.SOUTH);
     }
 
-    public void mostrarPersonaje(EntidadDTO p) {
+    /**
+     * Recibe el EntidadDTO que armó el controlador y construye las filas de
+     * stats. Antes recibía un Personaje del modelo directamente; ahora solo
+     * ve el snapshot inmutable, igual que el resto de las pantallas.
+     * habilidadesInfo trae, por cada habilidad, el texto ya armado por el
+     * controlador con nombre, costo de maná y descripción.
+     */
+    public void mostrarPersonaje(EntidadDTO p, String[] habilidadesInfo) {
+        panelDatos.removeAll();
+
         if (p == null) {
-            area.setText("Sin personaje.");
+            panelDatos.add(EstiloUI.labelSeccion("Sin personaje seleccionado."));
+            refrescar();
             return;
         }
 
-        // Selección de la biografía/historia temática según la clase
-        String historia;
-        switch (p.getClase().toUpperCase()) {
-            case "GUERRERO":
-                historia = "Un gaucho recio de las pampas bonaerenses. Defensor de la tradición, su\n" +
-                        "facón criollo y su poncho son su único resguardo contra las sombras que\n" +
-                        "brotan del Obelisco lluvioso.";
-                break;
-            case "MAGO":
-                historia = "Hechicero pampeano que aprendió los misterios rúnicos de los montes de\n" +
-                        "Caranday. Canaliza el misticismo del viento Pampero para azotar a las\n" +
-                        "bestias oscuras del horizonte.";
-                break;
-            case "ARQUERO":
-                historia = "Rastreador silencioso originario de los humedales del Paraná. Con su\n" +
-                        "arco reforzado tallado en madera dura de Guayacán, caza desde las\n" +
-                        "sombras con precisión letal.";
-                break;
-            case "CURANDERA":
-                historia = "Matriarca y médica yuyera de las afueras rurales. Utiliza la sabiduría\n" +
-                        "de la plata criolla y hierbas medicinales pampeanas para remendar y\n" +
-                        "resguardar el alma de sus compañeros.";
-                break;
-            default:
-                historia = "Un valiente combatiente de Buenos Aires que resiste con entereza en el\n" +
-                        "Horizonte Sombrío.";
-                break;
+        // Sección: identidad
+        agregarSeccion("PERSONAJE");
+        agregarFila("Nombre",  p.getNombre(),       EstiloUI.COLOR_DORADO);
+        agregarFila("Clase",   p.getClase(),        EstiloUI.COLOR_TEXTO_PRIMARIO);
+        agregarFila("Nivel",   "Nv." + p.getNivel(), EstiloUI.COLOR_TEXTO_PRIMARIO);
+
+        // Sección: vida y mana
+        agregarSeparador();
+        agregarSeccion("RECURSOS");
+        agregarFila("Vida",  p.getVidaActual()  + " / " + p.getVidaMax(),  EstiloUI.COLOR_HP);
+        agregarFila("Mana",  p.getManaActual()  + " / " + p.getManaMax(),  EstiloUI.COLOR_MP);
+
+        // Sección: stats de combate (ya incluyen el bono de equipamiento,
+        // tal como lo calcula Personaje.calcularAtaqueBase()/getDefensa())
+        agregarSeparador();
+        agregarSeccion("ESTADÍSTICAS");
+        agregarFila("Ataque",   String.valueOf(p.getAtaqueTotal()),   EstiloUI.COLOR_TEXTO_PRIMARIO);
+        agregarFila("Defensa",  String.valueOf(p.getDefensaTotal()),  EstiloUI.COLOR_TEXTO_PRIMARIO);
+
+        // Sección: equipamiento
+        agregarSeparador();
+        agregarSeccion("EQUIPAMIENTO");
+        agregarFila("Arma",       p.getNombreArma(),       EstiloUI.COLOR_TEXTO_PRIMARIO);
+        agregarFila("Accesorio",  p.getNombreAccesorio(),  EstiloUI.COLOR_TEXTO_PRIMARIO);
+
+        // Sección: efectos activos
+        agregarSeparador();
+        agregarSeccion("EFECTOS ACTIVOS");
+        agregarFila("Aturdido", p.isTieneAturdido() ? "SÍ" : "NO",
+                p.isTieneAturdido() ? EstiloUI.COLOR_ENEMIGO : EstiloUI.COLOR_TEXTO_SECUNDARIO);
+        agregarFila("Escudo",   p.isTieneEscudo()   ? "SÍ" : "NO",
+                p.isTieneEscudo()   ? EstiloUI.COLOR_MP     : EstiloUI.COLOR_TEXTO_SECUNDARIO);
+
+        // Sección: habilidades (nombre, costo de maná y descripción)
+        agregarSeparador();
+        agregarSeccion("HABILIDADES");
+        if (habilidadesInfo == null || habilidadesInfo.length == 0) {
+            agregarFilaHabilidad("Sin habilidades disponibles.");
+        } else {
+            for (int i = 0; i < habilidadesInfo.length; i++) {
+                agregarFilaHabilidad(habilidadesInfo[i]);
+            }
         }
 
-        String texto = ""
-                + "Nombre: " + p.getNombre() + "\n"
-                + "Clase: " + p.getClase() + "\n"
-                + "Nivel: " + p.getNivel() + " (EXP: " + p.getExperiencia() + "/100)\n"
-                + "\n"
-                + "Vida: " + p.getVidaActual() + "/" + p.getVidaMax() + "\n"
-                + "Mana: " + p.getManaActual() + "/" + p.getManaMax() + "\n"
-                + "Ataque Total: " + p.getAtaqueTotal() + "\n"
-                + "Defensa Total: " + p.getDefensaTotal() + "\n"
-                + "Velocidad Total: " + p.getVelocidadTotal() + "\n"
-                + "\n"
-                + "Equipamiento Activo:\n"
-                + " - [Arma]:      " + p.getNombreArma() + "\n"
-                + " - [Accesorio]: " + p.getNombreAccesorio() + "\n"
-                + "\n"
-                + "Estados Activos:\n"
-                + " - ATURDIDO: " + (p.isTieneAturdido() ? "SI" : "NO") + "\n"
-                + " - ESCUDO:    " + (p.isTieneEscudo() ? "SI" : "NO") + "\n"
-                + "\n"
-                + "─────────────────────────────────────────────────────────────────────────────\n"
-                + "Trasfondo Histórico:\n"
-                + historia + "\n"
-                + "─────────────────────────────────────────────────────────────────────────────\n";
+        refrescar();
+    }
 
-        area.setText(texto);
+    // ── Helpers de construcción visual ───────────────────────────────────────────
+
+    private void agregarSeccion(String titulo) {
+        JLabel lbl = EstiloUI.labelSeccion(titulo);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(new EmptyBorder(10, 0, 4, 0));
+        panelDatos.add(lbl);
+    }
+
+    private void agregarFila(String etiqueta, String valor, Color colorValor) {
+        JPanel fila = new JPanel(new BorderLayout(12, 0));
+        fila.setBackground(EstiloUI.COLOR_PANEL);
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fila.setBorder(BorderFactory.createCompoundBorder(
+                new MatteBorder(0, 0, 1, 0, new Color(55, 55, 65)),
+                new EmptyBorder(6, 12, 6, 12)));
+
+        JLabel lblEtiqueta = new JLabel(etiqueta);
+        lblEtiqueta.setFont(EstiloUI.FUENTE_TEXTO);
+        lblEtiqueta.setForeground(EstiloUI.COLOR_TEXTO_PRIMARIO);
+
+        JLabel lblValor = new JLabel(valor, SwingConstants.RIGHT);
+        lblValor.setFont(EstiloUI.FUENTE_LOG);
+        lblValor.setForeground(colorValor);
+
+        fila.add(lblEtiqueta, BorderLayout.WEST);
+        fila.add(lblValor, BorderLayout.EAST);
+        panelDatos.add(fila);
+    }
+
+    private void agregarFilaHabilidad(String texto) {
+        JLabel lbl = new JLabel("<html><body style='width:600px'>" + texto + "</body></html>");
+        lbl.setFont(EstiloUI.FUENTE_TEXTO);
+        lbl.setForeground(EstiloUI.COLOR_TEXTO_PRIMARIO);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(BorderFactory.createCompoundBorder(
+                new MatteBorder(0, 0, 1, 0, new Color(55, 55, 65)),
+                new EmptyBorder(8, 12, 8, 12)));
+        panelDatos.add(lbl);
+    }
+
+    private void agregarSeparador() {
+        JPanel sep = new JPanel();
+        sep.setBackground(EstiloUI.COLOR_FONDO);
+        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 10));
+        sep.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelDatos.add(sep);
+    }
+
+    private void refrescar() {
+        panelDatos.revalidate();
+        panelDatos.repaint();
     }
 }
